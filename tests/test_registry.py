@@ -20,6 +20,8 @@ REQUIRED_FIELDS = (
     "source",
     "evidence_type",
     "status",
+    "estimated",
+    "estimate_note",
 )
 
 
@@ -37,7 +39,9 @@ def test_every_parameter_has_required_fields(raw):
 def test_status_is_paper_or_estimate_and_estimates_explain_themselves(raw):
     for p in raw["parameters"]:
         assert p["status"] in STATUSES
+        assert p["estimated"] == (p["status"] == "估算")
         if p["status"] == "估算":
+            assert p["estimate_note"] == p["rationale"]
             assert p["source"] == "estimate"
             assert len(p.get("rationale", "")) > 20, p["id"]
         else:

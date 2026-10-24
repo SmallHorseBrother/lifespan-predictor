@@ -30,3 +30,13 @@ def test_mean_rr_is_positive_and_smoking_heavier_populations_score_higher(sex):
     everyone_smokes = pop.with_changes(smoking=np.full_like(pop.smoking, 3))
     assert np.all(mean_rr_by_age(everyone_smokes, c)[0][30:] > base[30:])
     assert len(BUCKET_STARTS) == 12
+
+
+def test_exported_mean_rr_table_is_up_to_date():
+    from scripts.export_mean_rr import OUT, rows
+
+    lines = OUT.read_text(encoding="utf-8").splitlines()
+    assert lines[0] == f"# registry_version={load_registry().version}"
+    exported = [line.split(",") for line in lines[2:]]
+    expected = [[r["sex"], str(r["age"]), r["mean_rr"]] for r in rows()]
+    assert exported == expected, "run scripts/export_mean_rr.py"

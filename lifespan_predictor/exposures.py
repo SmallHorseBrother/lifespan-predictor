@@ -68,19 +68,23 @@ def validate(profile: Profile) -> Profile:
     return profile
 
 
-def evidence_flags(
+def evidence_warnings(
     sex: str, age: float, pa_met_h: float, fruit_g: float, fish_g: float, sleep_h: float, bmi: float
-) -> list[str]:
-    """Inputs that fall outside the range the source studies observed."""
+) -> list[dict[str, str]]:
+    """Inputs outside the range the source studies observed: {code, field, message}."""
     reg = load_registry()
-    flags = []
+    out: list[dict[str, str]] = []
+
+    def add(field: str, message: str) -> None:
+        out.append({"code": "EXTRAPOLATED", "field": field, "message": message})
+
     if not CKB_BASELINE_AGE[0] <= age <= CKB_BASELINE_AGE[1]:
-        flags.append(f"年龄 {age:g} 不在 CKB 基线年龄 30-79 岁内，风险比按原值外推")
-    pa_lo, pa_hi = reg.value("pa.observed_range", sex)
+        add("person.age_years", f"年龄 {age:g} 不在 CKB 基线年龄 30-79 岁内，风险比按原值外推")
+    _, pa_hi = reg.value("pa.observed_range", sex)
     if pa_met_h > pa_hi:
-        flags.append(f"身体活动 {pa_met_h:g} MET-h/d 超过原模型最大值 {pa_hi}")
+        add("activity.pa_met_h", f"身体活动 {pa_met_h:g} MET-h/d 超过原模型最大值 {pa_hi}")
     if pa_met_h < reg.value("pa.floor", sex):
-        flags.append(f"身体活动 {pa_met_h:g} MET-h/d 低于对数截断值，按截断值计算")
+        add("activity.pa_met_h", f"身体活动 {pa_met_h:g} MET-h/d 低于对数截断值，按截断值计算")
     observed = reg.value("diet.observed_range", sex)
     caps = reg.value("diet.effect_caps", sex)
     for name, value in (("fruit", fruit_g), ("fish", fish_g)):
@@ -88,10 +92,17 @@ def evidence_flags(
         label = "水果" if name == "fruit" else "鱼/海产品"
         if not lo <= value <= hi:
             note = "，超出封顶值部分不再计入" if value > caps[name] else ""
-            flags.append(f"{label} {value:g} g/d 不在 CKB 观察范围 {lo}-{hi} g/d{note}")
+            add(f"diet.{name}_g", f"{label} {value:g} g/d 不在 CKB 观察范围 {lo}-{hi} g/d{note}")
     cut = reg.value("sleep.cutpoints", sex)
     if sleep_h < cut[0] or sleep_h > cut[-1]:
-        flags.append(f"睡眠 {sleep_h:g} h 超出主要队列覆盖范围，长期效应为外推")
+        add("sleep.hours_median", f"睡眠 {sleep_h:g} h 超出主要队列覆盖范围，长期效应为外推")
     if not BMI_SUPPORTED[0] <= bmi <= BMI_SUPPORTED[1]:
-        flags.append(f"BMI {bmi:.1f} 超出 {BMI_SUPPORTED[0]}-{BMI_SUPPORTED[1]}，风险为外推")
-    return flags
+        add("person.bmi", f"BMI {bmi:.1f} 超出 {BMI_SUPPORTED[0]}-{BMI_SUPPORTED[1]}，风险为外推")
+    return out
+
+
+def evidence_flags(
+    sex: str, age: float, pa_met_h: float, fruit_g: float, fish_g: float, sleep_h: float, bmi: float
+) -> list[str]:
+    """Human-readable messages of evidence_warnings."""
+    return [w["message"] for w in evidence_warnings(sex, age, pa_met_h, fruit_g, fish_g, sleep_h, bmi)]

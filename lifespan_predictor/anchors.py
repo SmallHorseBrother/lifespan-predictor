@@ -99,7 +99,8 @@ def nc2025_gain(sex: str, scenario: str) -> float:
 # - activity: >= median of the same sex in age bands <50, 50-59, >=60
 # - diet: score 4-5 needs fruit daily and fish weekly in practice, approximated
 #   by fruit >= 100 g/d and fish >= 20 g/d (CKB usual intake of the
-#   4-6 d/wk fruit group is 79 g, daily 123 g; 1-3 d/wk fish group 19.7 g)
+#   4-6 d/wk fruit group is 79 g, daily 123 g; fish: monthly 19.7 g,
+#   1-3 d/wk 31.3 g, so >= 20 g means eating fish at least weekly)
 # - body shape: BMI 18.5-27.9 (waist circumference is not modelled)
 DIET_FRUIT_MIN_G = 100.0
 DIET_FISH_MIN_G = 20.0

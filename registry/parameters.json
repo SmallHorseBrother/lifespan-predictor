@@ -1,5 +1,5 @@
 {
-  "registry_version": "2026.10.24-v0.1",
+  "registry_version": "2026.10.24-v0.2",
   "note": "寿命预测器参数注册表。status 只有两种：\"论文\"（来自论文或官方统计，并已联网核对）和 \"估算\"（无论文直接给出，按理由给点估计和大致范围）。range 对论文参数是 95% CI（与 estimate 同单位），对估算参数是合理范围。所有对数风险比均为自然对数。食探 Go 后端读取同一份文件。",
   "sources": {
     "nbs_census2020_t6_4": {
@@ -90,7 +90,9 @@
       "status": "论文",
       "used_in": [
         "engine"
-      ]
+      ],
+      "estimated": false,
+      "estimate_note": ""
     },
     {
       "id": "baseline.official_e0_2020",
@@ -113,7 +115,9 @@
       "used_in": [
         "engine",
         "test"
-      ]
+      ],
+      "estimated": false,
+      "estimate_note": ""
     },
     {
       "id": "baseline.census_completeness_scale",
@@ -145,7 +149,9 @@
       "rationale": "普查原始死亡率算出的 e0 为 男 79.11 / 女 84.06，高于官方 75.37 / 80.88，说明普查死亡登记不完整。这里假设各年龄漏报比例相同，用一个系数把 e0 校准到官方值。真实漏报很可能随年龄变化（婴儿与高龄更严重），所以范围给 1.3-1.5。",
       "used_in": [
         "engine"
-      ]
+      ],
+      "estimated": true,
+      "estimate_note": "普查原始死亡率算出的 e0 为 男 79.11 / 女 84.06，高于官方 75.37 / 80.88，说明普查死亡登记不完整。这里假设各年龄漏报比例相同，用一个系数把 e0 校准到官方值。真实漏报很可能随年龄变化（婴儿与高龄更严重），所以范围给 1.3-1.5。"
     },
     {
       "id": "baseline.old_age_tail",
@@ -168,7 +174,9 @@
       "rationale": "普查 95 岁以上死亡率在 0.20 左右变平，是年龄申报偏差的典型表现，不宜直接使用；Gompertz 外推是人口学常用做法，但可能高估最高龄死亡率（忽略死亡率减速）。",
       "used_in": [
         "engine"
-      ]
+      ],
+      "estimated": true,
+      "estimate_note": "普查 95 岁以上死亡率在 0.20 左右变平，是年龄申报偏差的典型表现，不宜直接使用；Gompertz 外推是人口学常用做法，但可能高估最高龄死亡率（忽略死亡率减速）。"
     },
     {
       "id": "smoking.former",
@@ -201,7 +209,9 @@
       "used_in": [
         "engine",
         "recentering"
-      ]
+      ],
+      "estimated": false,
+      "estimate_note": ""
     },
     {
       "id": "smoking.current_lt20",
@@ -233,7 +243,9 @@
       "used_in": [
         "engine",
         "recentering"
-      ]
+      ],
+      "estimated": false,
+      "estimate_note": ""
     },
     {
       "id": "smoking.current_ge20",
@@ -266,7 +278,9 @@
       "used_in": [
         "engine",
         "recentering"
-      ]
+      ],
+      "estimated": false,
+      "estimate_note": ""
     },
     {
       "id": "alcohol.daily_1_29",
@@ -299,7 +313,9 @@
       "used_in": [
         "engine",
         "recentering"
-      ]
+      ],
+      "estimated": false,
+      "estimate_note": ""
     },
     {
       "id": "alcohol.daily_30_59",
@@ -331,7 +347,9 @@
       "used_in": [
         "engine",
         "recentering"
-      ]
+      ],
+      "estimated": false,
+      "estimate_note": ""
     },
     {
       "id": "alcohol.daily_ge60",
@@ -363,7 +381,9 @@
       "used_in": [
         "engine",
         "recentering"
-      ]
+      ],
+      "estimated": false,
+      "estimate_note": ""
     },
     {
       "id": "pa.ln_met_h",
@@ -396,7 +416,9 @@
       "used_in": [
         "engine",
         "recentering"
-      ]
+      ],
+      "estimated": false,
+      "estimate_note": ""
     },
     {
       "id": "pa.center",
@@ -418,7 +440,9 @@
       "status": "论文",
       "used_in": [
         "engine"
-      ]
+      ],
+      "estimated": false,
+      "estimate_note": ""
     },
     {
       "id": "pa.observed_range",
@@ -446,7 +470,9 @@
       "status": "论文",
       "used_in": [
         "engine"
-      ]
+      ],
+      "estimated": false,
+      "estimate_note": ""
     },
     {
       "id": "pa.floor",
@@ -479,7 +505,9 @@
       "used_in": [
         "engine",
         "recentering"
-      ]
+      ],
+      "estimated": true,
+      "estimate_note": "总身体活动包含家务和日常走动，CNHS 80 岁以上组均值仍约 5.9（男）/ 4.8（女）MET-h/d，长期低于约 2 MET-h/d 的成年人很少。截断防止对数项在接近 0 时无限放大风险。代价是：对活动量极低的人，增加活动的收益会被低估（见 README 锚点检查中身体活动单项偏低）。"
     },
     {
       "id": "diet.fruit_per_g",
@@ -512,7 +540,9 @@
       "used_in": [
         "engine",
         "recentering"
-      ]
+      ],
+      "estimated": false,
+      "estimate_note": ""
     },
     {
       "id": "diet.fish_per_g",
@@ -545,7 +575,9 @@
       "used_in": [
         "engine",
         "recentering"
-      ]
+      ],
+      "estimated": false,
+      "estimate_note": ""
     },
     {
       "id": "diet.red_meat_per_g",
@@ -575,7 +607,9 @@
       "evidence_type": "前瞻队列（多变量死亡预测模型）",
       "status": "论文",
       "notes": "CKB 基线红肉摄入很低（11.7-65.2 g/天），红肉多吃风险更低的方向很可能反映收入和营养状况的混杂。原论文情景也没有改变红肉。引擎里把红肉固定在 50 g/天，不允许用户靠多吃红肉延寿。",
-      "used_in": []
+      "used_in": [],
+      "estimated": false,
+      "estimate_note": ""
     },
     {
       "id": "diet.centers",
@@ -605,7 +639,9 @@
       "status": "论文",
       "used_in": [
         "engine"
-      ]
+      ],
+      "estimated": false,
+      "estimate_note": ""
     },
     {
       "id": "diet.observed_range",
@@ -645,7 +681,9 @@
       "status": "论文",
       "used_in": [
         "engine"
-      ]
+      ],
+      "estimated": false,
+      "estimate_note": ""
     },
     {
       "id": "diet.effect_caps",
@@ -696,7 +734,9 @@
       "used_in": [
         "engine",
         "recentering"
-      ]
+      ],
+      "estimated": true,
+      "estimate_note": "原模型的对数线性关系只在 CKB 观察范围（水果 25-123 g、鱼 3-51 g）内有数据支撑；不封顶时每天吃 1 kg 水果会得到不合理的巨大收益。封顶值取原论文理想情景的量级（CNHS 均值约 80 g 水果 + 200 g；约 20 g 鱼 + 50 g）再留一些余量。"
     },
     {
       "id": "bmi.15_to_18_5",
@@ -729,7 +769,9 @@
       "used_in": [
         "engine",
         "recentering"
-      ]
+      ],
+      "estimated": false,
+      "estimate_note": ""
     },
     {
       "id": "bmi.18_5_to_20",
@@ -761,7 +803,9 @@
       "used_in": [
         "engine",
         "recentering"
-      ]
+      ],
+      "estimated": false,
+      "estimate_note": ""
     },
     {
       "id": "bmi.per5_above25_east_asia",
@@ -794,7 +838,9 @@
       "used_in": [
         "engine",
         "recentering"
-      ]
+      ],
+      "estimated": false,
+      "estimate_note": ""
     },
     {
       "id": "sleep.short",
@@ -826,7 +872,9 @@
       "used_in": [
         "engine",
         "recentering"
-      ]
+      ],
+      "estimated": false,
+      "estimate_note": ""
     },
     {
       "id": "sleep.long",
@@ -858,7 +906,9 @@
       "used_in": [
         "engine",
         "recentering"
-      ]
+      ],
+      "estimated": false,
+      "estimate_note": ""
     },
     {
       "id": "sleep.cutpoints",
@@ -896,7 +946,9 @@
       "used_in": [
         "engine",
         "recentering"
-      ]
+      ],
+      "estimated": true,
+      "estimate_note": "荟萃分析只给了短/长两类的合并 RR，没有剂量曲线。中间段取一半是最简单的平滑处理；<4 h 没有长期队列数据，不再继续放大风险，只标记外推。"
     },
     {
       "id": "sleep.shrinkage",
@@ -929,7 +981,9 @@
       "used_in": [
         "engine",
         "recentering"
-      ]
+      ],
+      "estimated": true,
+      "estimate_note": "CKB 2025 模型把睡眠时长列为候选变量，但最终模型没有保留，说明在中国成人中调整其他因素后睡眠的独立作用较小；Cappuccio 合并的研究调整程度不一，长睡眠与死亡的关联很可能部分来自已有疾病（反向因果）。为避免与吸烟、活动等因素重复计算，取一半。"
     },
     {
       "id": "lag.effect_tau_years",
@@ -961,7 +1015,9 @@
       "rationale": "两篇校准论文都没有建模滞后（Nat Commun 2025 在局限性中明确说明）。没有可靠参数时取一个温和的 2 年，并在范围里给出 0-10 年供敏感性分析；校准锚点检查使用 τ=0，与原论文口径一致。",
       "used_in": [
         "engine"
-      ]
+      ],
+      "estimated": true,
+      "estimate_note": "两篇校准论文都没有建模滞后（Nat Commun 2025 在局限性中明确说明）。没有可靠参数时取一个温和的 2 年，并在范围里给出 0-10 年供敏感性分析；校准锚点检查使用 τ=0，与原论文口径一致。"
     },
     {
       "id": "age.effect_attenuation",
@@ -1006,7 +1062,9 @@
       "used_in": [
         "engine",
         "recentering"
-      ]
+      ],
+      "estimated": true,
+      "estimate_note": "CKB 基线年龄 30-79 岁、随访约 12 年，90 岁以上几乎没有观察数据；GBMC 2016 摘要报告 BMI 斜率在 70-89 岁测量时（HR 1.21/5 单位）明显弱于 35-49 岁（1.52），说明相对风险随年龄减弱；Nat Commun 2025 的生命表只到 85 岁。按先验取 80 岁后线性减半，没有为了贴合锚点而调整。"
     },
     {
       "id": "pop.cnhs_smoking",
@@ -1039,7 +1097,9 @@
       "used_in": [
         "recentering",
         "anchor"
-      ]
+      ],
+      "estimated": false,
+      "estimate_note": ""
     },
     {
       "id": "pop.cnhs_current_smoking_by_age",
@@ -1076,7 +1136,9 @@
       "used_in": [
         "recentering",
         "anchor"
-      ]
+      ],
+      "estimated": false,
+      "estimate_note": ""
     },
     {
       "id": "pop.cnhs_alcohol",
@@ -1109,7 +1171,9 @@
       "used_in": [
         "recentering",
         "anchor"
-      ]
+      ],
+      "estimated": false,
+      "estimate_note": ""
     },
     {
       "id": "pop.cnhs_excess_alcohol_by_age",
@@ -1146,7 +1210,9 @@
       "used_in": [
         "recentering",
         "anchor"
-      ]
+      ],
+      "estimated": false,
+      "estimate_note": ""
     },
     {
       "id": "pop.cnhs_pa_mean_by_age",
@@ -1183,7 +1249,9 @@
       "used_in": [
         "recentering",
         "anchor"
-      ]
+      ],
+      "estimated": false,
+      "estimate_note": ""
     },
     {
       "id": "pop.cnhs_fruit_mean_by_age",
@@ -1220,7 +1288,9 @@
       "used_in": [
         "recentering",
         "anchor"
-      ]
+      ],
+      "estimated": false,
+      "estimate_note": ""
     },
     {
       "id": "pop.cnhs_fish_mean_by_age",
@@ -1257,7 +1327,9 @@
       "used_in": [
         "recentering",
         "anchor"
-      ]
+      ],
+      "estimated": false,
+      "estimate_note": ""
     },
     {
       "id": "pop.cnhs_overall_sd",
@@ -1306,7 +1378,9 @@
       "used_in": [
         "recentering",
         "anchor"
-      ]
+      ],
+      "estimated": false,
+      "estimate_note": ""
     },
     {
       "id": "pop.cnhs_bmi",
@@ -1339,7 +1413,9 @@
       "used_in": [
         "recentering",
         "anchor"
-      ]
+      ],
+      "estimated": false,
+      "estimate_note": ""
     },
     {
       "id": "pop.distribution_shapes",
@@ -1363,7 +1439,9 @@
       "used_in": [
         "recentering",
         "anchor"
-      ]
+      ],
+      "estimated": true,
+      "estimate_note": "论文只公开了均值、SD 和类别比例，没有公开联合分布；Source Data 的 'Figure S2' 工作表（CKB 预测变量相关矩阵）显示生活方式变量之间相关很弱（吸烟-饮酒 0.24，其余多数 |r|<0.13），独立假设对平均风险影响有限。"
     },
     {
       "id": "pop.sleep_distribution",
@@ -1398,7 +1476,9 @@
       "rationale": "两篇校准论文都没有公开中国人群睡眠分布。这里用一个以 7-8 小时为中心的对称分布；因为睡眠效应已收缩一半，这个分布对参照人群平均风险的影响小于 2%。",
       "used_in": [
         "recentering"
-      ]
+      ],
+      "estimated": true,
+      "estimate_note": "两篇校准论文都没有公开中国人群睡眠分布。这里用一个以 7-8 小时为中心的对称分布；因为睡眠效应已收缩一半，这个分布对参照人群平均风险的影响小于 2%。"
     },
     {
       "id": "hall.rho_fat",
@@ -1420,7 +1500,9 @@
       "status": "论文",
       "used_in": [
         "engine"
-      ]
+      ],
+      "estimated": false,
+      "estimate_note": ""
     },
     {
       "id": "hall.rho_lean",
@@ -1442,7 +1524,9 @@
       "status": "论文",
       "used_in": [
         "engine"
-      ]
+      ],
+      "estimated": false,
+      "estimate_note": ""
     },
     {
       "id": "hall.forbes_c",
@@ -1464,7 +1548,9 @@
       "status": "论文",
       "used_in": [
         "engine"
-      ]
+      ],
+      "estimated": false,
+      "estimate_note": ""
     },
     {
       "id": "hall.energy_expenditure",
@@ -1493,7 +1579,9 @@
       "notes": "该式在原文是一个基于横断面静息能耗和久坐活动的示例。Hall 2011 Lancet 的完整成人模型还包含适应性产热、食物热效应和随体重变化的活动能耗；这里用简化版，并在测试里用 Hall 2011 的经验法则检验量级。",
       "used_in": [
         "engine"
-      ]
+      ],
+      "estimated": false,
+      "estimate_note": ""
     },
     {
       "id": "hall.initial_body_fat",
@@ -1526,7 +1614,9 @@
       "notes": "亚洲人在同一 BMI 下体脂率通常更高，这个公式可能低估中国人体脂，影响的是 Forbes 分配比例，对长期体重变化量级影响有限。",
       "used_in": [
         "engine"
-      ]
+      ],
+      "estimated": false,
+      "estimate_note": ""
     },
     {
       "id": "hall.rule_of_thumb",
@@ -1548,7 +1638,9 @@
       "status": "论文",
       "used_in": [
         "test"
-      ]
+      ],
+      "estimated": false,
+      "estimate_note": ""
     },
     {
       "id": "hall.example_100kg_man",
@@ -1570,7 +1662,9 @@
       "status": "论文",
       "used_in": [
         "test"
-      ]
+      ],
+      "estimated": false,
+      "estimate_note": ""
     },
     {
       "id": "scenario.adverse_energy_surplus",
@@ -1602,7 +1696,9 @@
       "rationale": "Hall 2019 住院随机交叉试验中，超加工饮食两周内自由进食多吃约 508 kcal/天。短期试验不能直接外推几十年，长期会有部分代偿，所以取约一半作为默认值，上限保留 500 kcal/天。按 Hall 经验法则，250 kcal/天（约 1 MJ）最终约增重 10 kg。",
       "used_in": [
         "engine"
-      ]
+      ],
+      "estimated": true,
+      "estimate_note": "Hall 2019 住院随机交叉试验中，超加工饮食两周内自由进食多吃约 508 kcal/天。短期试验不能直接外推几十年，长期会有部分代偿，所以取约一半作为默认值，上限保留 500 kcal/天。按 Hall 经验法则，250 kcal/天（约 1 MJ）最终约增重 10 kg。"
     },
     {
       "id": "scenario.optimized_targets",
@@ -1645,7 +1741,9 @@
       "rationale": "目标取 Nat Commun 2025 理想情景的同量级（戒烟、过量饮酒降为适量、活动 +4 MET-h/d、水果 +200 g、鱼 +50 g），并要求 BMI 落在 GBMC 最低风险区间 20-25 内。这是产品设定，不是论文给出的最优值。",
       "used_in": [
         "engine"
-      ]
+      ],
+      "estimated": true,
+      "estimate_note": "目标取 Nat Commun 2025 理想情景的同量级（戒烟、过量饮酒降为适量、活动 +4 MET-h/d、水果 +200 g、鱼 +50 g），并要求 BMI 落在 GBMC 最低风险区间 20-25 内。这是产品设定，不是论文给出的最优值。"
     },
     {
       "id": "scenario.adverse_targets",
@@ -1682,7 +1780,100 @@
       "rationale": "各项取原模型观察范围的不利端（水果、鱼取 CKB 下限，活动取 CNHS 高龄组均值量级），避免进入没有数据的极端区间；这是现实中可同时出现的一组不良习惯，不是每项都设为最坏值。",
       "used_in": [
         "engine"
-      ]
+      ],
+      "estimated": true,
+      "estimate_note": "各项取原模型观察范围的不利端（水果、鱼取 CKB 下限，活动取 CNHS 高龄组均值量级），避免进入没有数据的极端区间；这是现实中可同时出现的一组不良习惯，不是每项都设为最坏值。"
+    },
+    {
+      "id": "scenario.diet_right_targets",
+      "domain": "情景",
+      "variable": "饮食分叉：把饮食吃对",
+      "exposure_definition": "只改饮食：水果→max(当前, fruit_g)；鱼→max(当前, fish_g)；BMI→通过长期能量摄入调整到 bmi_range（已在区间内则不变）。吸烟、饮酒、活动、睡眠与 current 相同",
+      "reference_level": "用户当前输入",
+      "unit": "-",
+      "effect_type": "rule",
+      "estimate": {
+        "male": {
+          "fruit_g": 250.0,
+          "fish_g": 50.0,
+          "bmi_range": [
+            20.5,
+            23.5
+          ]
+        },
+        "female": {
+          "fruit_g": 250.0,
+          "fish_g": 50.0,
+          "bmi_range": [
+            20.5,
+            23.5
+          ]
+        }
+      },
+      "range": null,
+      "population": "-",
+      "source": "estimate",
+      "source_location": "lifespan_predictor/scenarios.py",
+      "evidence_type": "模型假设",
+      "status": "估算",
+      "rationale": "与多因素优化情景的饮食部分相同：水果、鱼的目标取 Nat Commun 2025 理想情景（+200 g 水果、+50 g 鱼）的量级，BMI 落在 GBMC 最低风险区间 20-25 内。只改饮食是食探设计稿第 1 节的决定，这样差距只来自吃法。",
+      "used_in": [
+        "engine"
+      ],
+      "estimated": true,
+      "estimate_note": "与多因素优化情景的饮食部分相同：水果、鱼的目标取 Nat Commun 2025 理想情景（+200 g 水果、+50 g 鱼）的量级，BMI 落在 GBMC 最低风险区间 20-25 内。只改饮食是食探设计稿第 1 节的决定，这样差距只来自吃法。"
+    },
+    {
+      "id": "scenario.diet_loose_targets",
+      "domain": "情景",
+      "variable": "饮食分叉：放飞自我",
+      "exposure_definition": "只改饮食：水果→min(当前, fruit_g)；鱼→min(当前, fish_g)；长期能量盈余见 scenario.adverse_energy_surplus（取当前与其中较大者）。吸烟、饮酒、活动、睡眠与 current 相同",
+      "reference_level": "用户当前输入",
+      "unit": "-",
+      "effect_type": "rule",
+      "estimate": {
+        "male": {
+          "fruit_g": 25.0,
+          "fish_g": 3.0
+        },
+        "female": {
+          "fruit_g": 25.0,
+          "fish_g": 3.0
+        }
+      },
+      "range": {
+        "male": {
+          "fruit_g": [
+            11.4,
+            56.2
+          ],
+          "fish_g": [
+            3.0,
+            19.7
+          ]
+        },
+        "female": {
+          "fruit_g": [
+            11.4,
+            56.2
+          ],
+          "fish_g": [
+            3.0,
+            19.7
+          ]
+        }
+      },
+      "population": "-",
+      "source": "estimate",
+      "source_location": "lifespan_predictor/scenarios.py",
+      "evidence_type": "模型假设",
+      "status": "估算",
+      "rationale": "取 CKB 频率组的常用摄入量（Nat Commun 2025 补充表 8-9）：水果 25 g/天 对应\"从不/很少吃\"组，鱼 3 g/天 对应\"从不/很少吃\"组，都在原模型观察范围的下端、不需要外推；范围上限取水果\"每周 1-3 天\"组（56.2 g）、鱼\"每月\"组（19.7 g）。这是一组现实中常见的饮食，不是每项都设为最差；红肉固定不变，蔬菜、豆类、钠等还没有进入模型。",
+      "used_in": [
+        "engine"
+      ],
+      "estimated": true,
+      "estimate_note": "取 CKB 频率组的常用摄入量（Nat Commun 2025 补充表 8-9）：水果 25 g/天 对应\"从不/很少吃\"组，鱼 3 g/天 对应\"从不/很少吃\"组，都在原模型观察范围的下端、不需要外推；范围上限取水果\"每周 1-3 天\"组（56.2 g）、鱼\"每月\"组（19.7 g）。这是一组现实中常见的饮食，不是每项都设为最差；红肉固定不变，蔬菜、豆类、钠等还没有进入模型。"
     },
     {
       "id": "anchor.nc2025",
@@ -1741,7 +1932,9 @@
       "status": "论文",
       "used_in": [
         "test"
-      ]
+      ],
+      "estimated": false,
+      "estimate_note": ""
     },
     {
       "id": "anchor.ckb2022",
@@ -1791,7 +1984,9 @@
       "used_in": [
         "test"
       ],
-      "notes": "HR 0.38 是男女合并值（摘要未分性别给出），男女两列填的是同一个数；预期寿命差 8.8 / 8.1 是分性别的。"
+      "notes": "HR 0.38 是男女合并值（摘要未分性别给出），男女两列填的是同一个数；预期寿命差 8.8 / 8.1 是分性别的。",
+      "estimated": false,
+      "estimate_note": ""
     }
   ]
 }

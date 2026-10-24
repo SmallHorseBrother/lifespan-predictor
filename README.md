@@ -85,7 +85,9 @@ summary = result.to_dict()  # JSON-ready：三个情景的分布、到达 70/80/
 状态只有两种：
 
 - **论文**（39 项）：来自论文或官方统计，已联网核对。对数风险比的范围是论文的 95% CI。
-- **估算**（13 项）：没有论文直接给出，写明理由和大致范围。包括：普查漏报校准系数、95 岁以上外推、身体活动对数截断、饮食效应封顶、睡眠分段和收缩、滞后 τ、高龄衰减、参照人群的分布形状和睡眠分布、三个情景的具体设定。
+- **估算**（15 项）：没有论文直接给出，写明理由和大致范围。包括：普查漏报校准系数、95 岁以上外推、身体活动对数截断、饮食效应封顶、睡眠分段和收缩、滞后 τ、高龄衰减、参照人群的分布形状和睡眠分布、多因素和只改饮食两种模式下各情景的具体设定。
+
+每个参数另有 `estimated`（布尔值，等于 status 是否为“估算”）和 `estimate_note`（估算理由，论文参数为空），方便食探直接读取。
 
 一处需要说明的单位理解：Nat Commun 2025 补充表 4 把水果、红肉、鱼的 β 单位写成“10 g/d”，但按这个单位换算出的 HR（水果每 10 g 0.88）和正文 Table 1（0.98）对不上；按“每 100 g/d”理解后与 Table 1 一致，本仓库采用后者（测试 `test_diet_unit_interpretation_matches_table1_hr_per_10g` 固定了这个理解）。红肉在 CKB 中表现为“多吃风险低”，很可能是收入和营养状况的混杂，引擎把红肉固定在中心值，不作为可调变量。
 
@@ -117,14 +119,57 @@ summary = result.to_dict()  # JSON-ready：三个情景的分布、到达 70/80/
 
 **敏感性**：如果不做高龄衰减（80 岁后仍按原 HR），男/女理想情景为 +5.41 / +6.79（女性超出 CI），现实情景 +2.50 / +3.11，CKB 2022 对比为 +9.08 / +11.51。
 
+## 接入食探
+
+食探默认用**只改饮食**模式：吸烟、饮酒、活动、睡眠在三条未来里都和现在一样，只有水果、鱼和长期能量平衡不同，这样“差距来自吃法”才成立。多因素模式保留，用 `mode="lifestyle"`。
+
+| 模式 | 情景键 | 说明 |
+|---|---|---|
+| `diet`（食探默认） | `current` / `diet_right` / `diet_loose` | 照现在这样吃 / 把饮食吃对（水果 ≥250 g、鱼 ≥50 g、BMI 回到 20.5–23.5）/ 放飞自我（水果 ≤25 g、鱼 ≤3 g、每天多 250 kcal） |
+| `lifestyle` | `current` / `optimized` / `adverse` | 六个领域都可以变 |
+
+```python
+from lifespan_predictor import Profile
+from lifespan_predictor.foodlink import lifespan_result, one_life
+
+result = lifespan_result(profile, mode="diet", seed=182772)    # LifespanResult
+life = one_life(profile, mode="diet", seed=182772, life_index=0)  # 跑一次人生
+```
+
+```bash
+python -m lifespan_predictor --sex male --age 30 --height 175 --weight 82 --mode diet --format foodlink
+```
+
+同一个 30 岁男性（示例里那位），只改饮食时：照现在 平均活到 76.1 岁，把饮食吃对 80.7 岁，放飞自我 72.3 岁；单项收益是水果 +2.3 年、鱼 +1.2 年、体重回到合理区间 +1.2 年。饮食单项的量级偏大，和锚点检查里饮食单项比论文高（男 +8%、女 +26%）是同一个原因。
+
+与食探设计稿（`food_link/docs/algorithms/foodlink-lifespan-simulator-v1-design.md` 第 4.2 节）的字段对齐：
+
+| 字段 | 状态 |
+|---|---|
+| `model{engine_version, params_version, params_sha256, input_hash, seed, computed_at}` | 已实现。`input_hash` 是画像、模式、滞后和抽样组数的规范化 JSON 的 SHA-256，不含 seed |
+| `applicability{age_in_range, extrapolated_inputs, completeness_pct}` | `completeness_pct` 为 null：第一版要求输入完整，还没有缺失值填补 |
+| `branches[].life_expectancy{median, mean, p10, p90}` | 已实现，单位是死亡年龄（岁），由风险积分直接算出，没有蒙特卡洛噪声 |
+| `branches[].survival[{age, p_alive, p_alive_disease_free}]` | 逐年；`p_alive_disease_free` 为 null（没有疾病模块） |
+| `branches[].healthy_years` | null |
+| `branches[].trajectory[{age, weight_kg, bmi}]` | 已实现 |
+| `branches[].death_age_histogram{bin_years, start_age, density}` | 已实现，`density` 是每个 2 年分箱的死亡概率 |
+| `top_changes[]{factor, label, current, target, unit, gain_years{median, low, high}, gain_p85_pct, evidence, parameter_ids}` | 已实现。单因素反事实，范围来自论文系数抽样（2.5%–97.5%） |
+| `warnings[]{code, field, message}` | 已实现：`EXTRAPOLATED`（外推输入，带 `branch`）、`NOT_MODELLED`（无病生存等） |
+| 单次人生 `{seed, branches[{key, death_age, events[{age, type}]}]}` | 已实现，三个情景共用同一个随机数；第一版只有 `death` 事件 |
+| 可移植随机数 | 单次人生用 SplitMix64：`u = (splitmix64(seed·0x9E3779B97F4A7C15 + life_index) >> 11 + 0.5)·2⁻⁵³`，阈值 `−ln(1−u)`，不含情景编号，测试里固定了参考值 |
+| Go 端复现 | 确定性曲线只依赖注册表、生命表和 `data/mean_rr_point.csv`（`scripts/export_mean_rr.py` 导出）。`top_changes` 的范围和 `simulate()` 的蒙特卡洛用 numpy 随机数，Go 端只能按容差比较 |
+| 输入 `LifespanInput` | 还没有适配层：引擎目前接收 `Profile`（性别、年龄、身高、体重、吸烟 4 档、饮酒 4 档、MET-h/d、水果 g/d、鱼 g/d、睡眠、能量平衡）。体重趋势→能量平衡、食物组份数→克数、疾病和生物标志物都还没有接 |
+| 黄金向量 | 还没有导出 |
+
 ## 目录
 
 ```
 data/raw/census2020_table6-4.xls   国家统计局原始表（未改动）
 data/cn_life_table_2020.csv        校准后的逐岁生命表（含原始 m_x）
+data/mean_rr_point.csv             参照人群平均风险比（点估计，给 Go 端嵌入）
 registry/parameters.json           参数注册表（唯一数据源）
 registry/parameters.csv            注册表的扁平导出（给 Go / 表格软件）
-lifespan_predictor/                引擎：life_table、hazards、population、weight、scenarios、simulate、anchors
+lifespan_predictor/                引擎：life_table、hazards、population、weight、scenarios、simulate、anchors、foodlink
 scripts/                           生命表构建、注册表导出、锚点报告
 tests/                             单元测试 + 校准锚点检查
 docs/sources.md                    每个来源的标识和核对方式
@@ -147,4 +192,4 @@ docs/anchor_results.md             锚点检查完整结果
 - 参数不确定性只抽样论文系数，估算参数（衰减、收缩、滞后、能量盈余等）需要做结构敏感性分析，还没有做成自动报告。论文系数的 SE 由 Table 1 两位小数的 HR 置信区间反推（补充表 4 只给 β、没给 SE），会有一定误差。
 - 参照人群各因素独立抽样，没有建模吸烟与饮酒等因素的相关。
 - 随机数用 numpy 的 PCG64，Go 端要逐位复现需要换成可移植的生成器（见交接清单）。
-- 还没有和食探的 Go 后端对接，也没有接口服务。
+- 还没有和食探的 Go 后端对接，也没有接口服务；`LifespanInput` 适配层和黄金向量还没做（见“接入食探”）。

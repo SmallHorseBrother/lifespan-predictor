@@ -206,12 +206,14 @@ def simulate(
     lag_tau_years: float | None = None,
     parameter_uncertainty: bool = True,
     scenarios: tuple[Scenario, ...] | None = None,
+    mode: str = "lifestyle",
 ) -> SimulationResult:
     """Simulate the forked futures of one person.
 
     scenarios: optional custom futures (e.g. diet-only forks); the first one
     is the reference that lagged effects start from and pairing compares to.
-    Default: current / optimized / adverse.
+    Default: the three futures of `mode` ("lifestyle": current / optimized /
+    adverse; "diet": current / diet_right / diet_loose).
     n_lives must be a multiple of the number of parameter draws.
     """
     validate(profile)
@@ -231,7 +233,7 @@ def simulate(
     mean_rr = mean_rr_by_age(reference_population(profile.sex), c)
     thresholds = life_rng.exponential(size=(draws, lives_per_draw))
 
-    futures = build_scenarios(profile) if scenarios is None else tuple(scenarios)
+    futures = build_scenarios(profile, mode) if scenarios is None else tuple(scenarios)
     if not futures:
         raise ValueError("scenarios must not be empty")
     base = futures[0]

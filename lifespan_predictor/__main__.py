@@ -11,6 +11,7 @@ import json
 import sys
 
 from .exposures import ALCOHOL, SMOKING, Profile
+from .foodlink import lifespan_result, one_life
 from .simulate import simulate
 
 
@@ -32,6 +33,9 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     p.add_argument("--seed", type=int, default=20261024)
     p.add_argument("--lag", type=float, default=None, help="行为改变的滞后时间常数（年）")
     p.add_argument("--plot", default=None, help="把生存曲线和体重轨迹画到这个 PNG 文件")
+    p.add_argument("--mode", choices=("lifestyle", "diet"), default="lifestyle", help="lifestyle=多因素分叉；diet=只改饮食（食探默认）")
+    p.add_argument("--format", choices=("summary", "foodlink", "one-life"), default="summary", help="输出格式")
+    p.add_argument("--life-index", type=int, default=0, help="--format one-life 时的人生编号")
     return p.parse_args(argv)
 
 
@@ -53,12 +57,20 @@ def main(argv: list[str] | None = None) -> int:
         energy_balance_kcal=args.energy_balance,
     )
     try:
-        result = simulate(profile, n_lives=args.lives, n_param_draws=args.draws, seed=args.seed, lag_tau_years=args.lag)
+        if args.format == "foodlink":
+            payload = lifespan_result(profile, mode=args.mode, seed=args.seed, n_param_draws=args.draws, lag_tau_years=args.lag)
+        elif args.format == "one-life":
+            payload = one_life(profile, mode=args.mode, seed=args.seed, life_index=args.life_index, lag_tau_years=args.lag)
+        else:
+            result = simulate(
+                profile, n_lives=args.lives, n_param_draws=args.draws, seed=args.seed, lag_tau_years=args.lag, mode=args.mode
+            )
+            payload = result.to_dict()
     except ValueError as exc:
         print(str(exc), file=sys.stderr)
         return 2
-    print(json.dumps(result.to_dict(), ensure_ascii=False, indent=2))
-    if args.plot:
+    print(json.dumps(payload, ensure_ascii=False, indent=2))
+    if args.plot and args.format == "summary":
         from .plots import plot_result
 
         plot_result(result, args.plot)
