@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "lifespan-predictor"
+version = "0.1.0"
+description = "寿命预测器：基于中国生命表与已发表研究参数的寿命模拟估算（不用于诊断）"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = ["numpy>=1.26"]
+
+[project.optional-dependencies]
+plot = ["matplotlib>=3.8"]
+dev = ["pytest>=7.4", "xlrd>=2.0"]
+
+[tool.setuptools]
+packages = ["lifespan_predictor"]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]

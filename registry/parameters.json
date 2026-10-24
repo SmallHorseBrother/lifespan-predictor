@@ -1,0 +1,1797 @@
+{
+  "registry_version": "2026.10.24-v0.1",
+  "note": "寿命预测器参数注册表。status 只有两种：\"论文\"（来自论文或官方统计，并已联网核对）和 \"估算\"（无论文直接给出，按理由给点估计和大致范围）。range 对论文参数是 95% CI（与 estimate 同单位），对估算参数是合理范围。所有对数风险比均为自然对数。食探 Go 后端读取同一份文件。",
+  "sources": {
+    "nbs_census2020_t6_4": {
+      "citation": "国家统计局. 中国人口普查年鉴-2020, 表 6-4 全国分年龄、性别的死亡人口状况 (2019.11.1-2020.10.31)",
+      "url": "https://www.stats.gov.cn/sj/pcsj/rkpc/7rp/zk/html/A0604.xls",
+      "verified": "2026-10-24 下载原始 xls，逐岁平均人口与死亡人口读入 data/cn_life_table_2020.csv"
+    },
+    "nbs_yearbook2025_t2_3": {
+      "citation": "国家统计局. 中国统计年鉴2025, 表 2-3 平均预期寿命",
+      "url": "https://www.stats.gov.cn/sj/ndsj/2025/html/C02-03.jpg",
+      "verified": "2026-10-24 查看官方表格图片：2020 年 合计 77.93、男 75.37、女 80.88"
+    },
+    "sun2025_natcomm": {
+      "citation": "Sun Q, et al. A simulation study of the impact of population-wide lifestyle modifications on life expectancy in the Chinese population. Nat Commun. 2025 (published 2025-11-07).",
+      "doi": "10.1038/s41467-025-64824-x",
+      "pmid": "41203624",
+      "pmcid": "PMC12594753",
+      "verified": "2026-10-24 Europe PMC 全文 XML + 补充材料 PDF（Supplementary Table 1/4）+ Source Data xlsx（Figure S6）"
+    },
+    "sun2022_lancetph": {
+      "citation": "Sun Q, et al. Healthy lifestyle and life expectancy at age 30 years in the Chinese population: an observational study. Lancet Public Health. 2022;7(12):e994-e1004.",
+      "doi": "10.1016/S2468-2667(22)00110-4",
+      "pmid": "35926549",
+      "pmcid": "PMC7615002",
+      "verified": "2026-10-24 PubMed 摘要 + Europe PMC 全文（低风险因素定义、Table 1）"
+    },
+    "gbmc2016_lancet": {
+      "citation": "Global BMI Mortality Collaboration. Body-mass index and all-cause mortality: individual-participant-data meta-analysis of 239 prospective studies in four continents. Lancet. 2016;388(10046):776-786.",
+      "doi": "10.1016/S0140-6736(16)30175-1",
+      "pmid": "27423262",
+      "verified": "2026-10-24 PubMed 摘要"
+    },
+    "cappuccio2010_sleep": {
+      "citation": "Cappuccio FP, D'Elia L, Strazzullo P, Miller MA. Sleep duration and all-cause mortality: a systematic review and meta-analysis of prospective studies. Sleep. 2010;33(5):585-592.",
+      "doi": "10.1093/sleep/33.5.585",
+      "pmid": "20469800",
+      "verified": "2026-10-24 PubMed 摘要"
+    },
+    "chow_hall2008_ploscb": {
+      "citation": "Chow CC, Hall KD. The dynamics of human body weight change. PLoS Comput Biol. 2008;4(3):e1000045.",
+      "doi": "10.1371/journal.pcbi.1000045",
+      "pmid": "18369435",
+      "pmcid": "PMC2266991",
+      "verified": "2026-10-24 Europe PMC 全文 XML"
+    },
+    "hall2011_lancet": {
+      "citation": "Hall KD, et al. Quantification of the effect of energy imbalance on bodyweight. Lancet. 2011;378(9793):826-837.",
+      "doi": "10.1016/S0140-6736(11)60812-X",
+      "pmid": "21872751",
+      "pmcid": "PMC3880593",
+      "verified": "2026-10-24 PubMed 摘要 + PMC 作者稿全文"
+    },
+    "hall2019_cellmetab": {
+      "citation": "Hall KD, et al. Ultra-Processed Diets Cause Excess Calorie Intake and Weight Gain: An Inpatient Randomized Controlled Trial of Ad Libitum Food Intake. Cell Metab. 2019;30(1):67-77.e3.",
+      "doi": "10.1016/j.cmet.2019.05.008",
+      "pmid": "31105044",
+      "verified": "2026-10-24 PubMed 摘要"
+    },
+    "deurenberg1991_bjn": {
+      "citation": "Deurenberg P, Weststrate JA, Seidell JC. Body mass index as a measure of body fatness: age- and sex-specific prediction formulas. Br J Nutr. 1991;65(2):105-114.",
+      "doi": "10.1079/bjn19910073",
+      "pmid": "2043597",
+      "verified": "2026-10-24 PubMed 摘要"
+    },
+    "estimate": {
+      "citation": "本仓库估算（见各参数 rationale）",
+      "verified": "不适用"
+    }
+  },
+  "parameters": [
+    {
+      "id": "baseline.life_table_cn2020",
+      "domain": "基础死亡率",
+      "variable": "全因死亡率 m_x",
+      "exposure_definition": "2020 年人口普查前 12 个月（2019.11.1-2020.10.31）逐岁死亡人口 / 平均人口，0-94 岁直接取普查值",
+      "reference_level": "全国人口",
+      "unit": "每人年",
+      "effect_type": "baseline_table",
+      "estimate": {
+        "male": "data/cn_life_table_2020.csv",
+        "female": "data/cn_life_table_2020.csv"
+      },
+      "range": null,
+      "population": "中国全国人口（普查）",
+      "source": "nbs_census2020_t6_4",
+      "source_location": "表 6-4",
+      "evidence_type": "官方统计",
+      "status": "论文",
+      "used_in": [
+        "engine"
+      ]
+    },
+    {
+      "id": "baseline.official_e0_2020",
+      "domain": "基础死亡率",
+      "variable": "出生时平均预期寿命（2020）",
+      "exposure_definition": "官方公布的 2020 年平均预期寿命，用于校准普查死亡漏报",
+      "reference_level": "全国人口",
+      "unit": "岁",
+      "effect_type": "calibration_target",
+      "estimate": {
+        "male": 75.37,
+        "female": 80.88
+      },
+      "range": null,
+      "population": "中国全国人口",
+      "source": "nbs_yearbook2025_t2_3",
+      "source_location": "表 2-3，2020 行",
+      "evidence_type": "官方统计",
+      "status": "论文",
+      "used_in": [
+        "engine",
+        "test"
+      ]
+    },
+    {
+      "id": "baseline.census_completeness_scale",
+      "domain": "基础死亡率",
+      "variable": "普查死亡率整体放大系数",
+      "exposure_definition": "普查原始 m_x 乘以该系数后，出生时预期寿命等于官方 2020 年值",
+      "reference_level": "普查原始死亡率",
+      "unit": "倍数",
+      "effect_type": "multiplier",
+      "estimate": {
+        "male": 1.4095,
+        "female": 1.4168
+      },
+      "range": {
+        "male": [
+          1.3,
+          1.5
+        ],
+        "female": [
+          1.3,
+          1.5
+        ]
+      },
+      "population": "中国全国人口",
+      "source": "estimate",
+      "source_location": "scripts/build_life_table.py",
+      "evidence_type": "模型校准",
+      "status": "估算",
+      "rationale": "普查原始死亡率算出的 e0 为 男 79.11 / 女 84.06，高于官方 75.37 / 80.88，说明普查死亡登记不完整。这里假设各年龄漏报比例相同，用一个系数把 e0 校准到官方值。真实漏报很可能随年龄变化（婴儿与高龄更严重），所以范围给 1.3-1.5。",
+      "used_in": [
+        "engine"
+      ]
+    },
+    {
+      "id": "baseline.old_age_tail",
+      "domain": "基础死亡率",
+      "variable": "95-110 岁死亡率",
+      "exposure_definition": "用 80-94 岁 ln(m_x) 线性回归（Gompertz）外推 95-110 岁",
+      "reference_level": "普查 80-94 岁死亡率",
+      "unit": "每人年",
+      "effect_type": "extrapolation_rule",
+      "estimate": {
+        "male": "gompertz_fit_80_94",
+        "female": "gompertz_fit_80_94"
+      },
+      "range": null,
+      "population": "中国全国人口",
+      "source": "estimate",
+      "source_location": "scripts/build_life_table.py",
+      "evidence_type": "模型假设",
+      "status": "估算",
+      "rationale": "普查 95 岁以上死亡率在 0.20 左右变平，是年龄申报偏差的典型表现，不宜直接使用；Gompertz 外推是人口学常用做法，但可能高估最高龄死亡率（忽略死亡率减速）。",
+      "used_in": [
+        "engine"
+      ]
+    },
+    {
+      "id": "smoking.former",
+      "domain": "吸烟",
+      "variable": "既往吸烟（非因病戒烟）",
+      "exposure_definition": "曾吸烟、因疾病以外原因戒烟；因病戒烟者按当前吸烟处理",
+      "reference_level": "从不吸烟",
+      "unit": "ln(HR)",
+      "effect_type": "log_hr",
+      "estimate": {
+        "male": 0.08252,
+        "female": 0.0821
+      },
+      "range": {
+        "male": [
+          0.00995,
+          0.12222
+        ],
+        "female": [
+          -0.03046,
+          0.26236
+        ]
+      },
+      "population": "CKB 30-79 岁成人（推导队列 男 140,135 / 女 201,678）",
+      "source": "sun2025_natcomm",
+      "source_location": "点估计：Supplementary Table 4（最终模型 β）；范围：Table 1 HR 95% CI",
+      "evidence_type": "前瞻队列（多变量死亡预测模型）",
+      "status": "论文",
+      "notes": "模型同时调整了 BMI、收缩压、自评健康和既往疾病，属于不经这些中介的效应。",
+      "used_in": [
+        "engine",
+        "recentering"
+      ]
+    },
+    {
+      "id": "smoking.current_lt20",
+      "domain": "吸烟",
+      "variable": "当前吸烟 <20 支/天",
+      "exposure_definition": "当前吸烟，每天 <20 支卷烟或等量",
+      "reference_level": "从不吸烟",
+      "unit": "ln(HR)",
+      "effect_type": "log_hr",
+      "estimate": {
+        "male": 0.22444,
+        "female": 0.28894
+      },
+      "range": {
+        "male": [
+          0.17395,
+          0.25464
+        ],
+        "female": [
+          0.19885,
+          0.33647
+        ]
+      },
+      "population": "CKB 30-79 岁成人",
+      "source": "sun2025_natcomm",
+      "source_location": "Supplementary Table 4；Table 1",
+      "evidence_type": "前瞻队列（多变量死亡预测模型）",
+      "status": "论文",
+      "used_in": [
+        "engine",
+        "recentering"
+      ]
+    },
+    {
+      "id": "smoking.current_ge20",
+      "domain": "吸烟",
+      "variable": "当前吸烟 ≥20 支/天",
+      "exposure_definition": "当前吸烟，每天 ≥20 支卷烟或等量",
+      "reference_level": "从不吸烟",
+      "unit": "ln(HR)",
+      "effect_type": "log_hr",
+      "estimate": {
+        "male": 0.27836,
+        "female": 0.47761
+      },
+      "range": {
+        "male": [
+          0.25464,
+          0.3293
+        ],
+        "female": [
+          0.29267,
+          0.56531
+        ]
+      },
+      "population": "CKB 30-79 岁成人",
+      "source": "sun2025_natcomm",
+      "source_location": "Supplementary Table 4；Table 1",
+      "evidence_type": "前瞻队列（多变量死亡预测模型）",
+      "status": "论文",
+      "notes": "男性 β 换算 HR 1.32，略低于 Table 1 的 1.34；女性 β 换算 1.61，Table 1 为 1.53（1.34-1.76）。均落在 Table 1 的 95% CI 内，这里以补充表 4 的最终模型 β 为准。",
+      "used_in": [
+        "engine",
+        "recentering"
+      ]
+    },
+    {
+      "id": "alcohol.daily_1_29",
+      "domain": "饮酒",
+      "variable": "每天饮酒 1-29 g 纯酒精",
+      "exposure_definition": "当前每天饮酒，纯酒精 1-29 g/天",
+      "reference_level": "非每天饮酒（含从不规律饮酒与每周饮酒）",
+      "unit": "ln(HR)",
+      "effect_type": "log_hr",
+      "estimate": {
+        "male": 0.01344,
+        "female": -0.05296
+      },
+      "range": {
+        "male": [
+          -0.05129,
+          0.07696
+        ],
+        "female": [
+          -0.26136,
+          0.08618
+        ]
+      },
+      "population": "CKB 30-79 岁成人",
+      "source": "sun2025_natcomm",
+      "source_location": "Supplementary Table 4；Table 1",
+      "evidence_type": "前瞻队列（多变量死亡预测模型）",
+      "status": "论文",
+      "notes": "女性点估计 <0，但 95% CI 跨 1，不应解读为少量饮酒有保护作用；优化情景直接设为非每天饮酒。",
+      "used_in": [
+        "engine",
+        "recentering"
+      ]
+    },
+    {
+      "id": "alcohol.daily_30_59",
+      "domain": "饮酒",
+      "variable": "每天饮酒 30-59 g 纯酒精",
+      "exposure_definition": "当前每天饮酒，纯酒精 30-59 g/天",
+      "reference_level": "非每天饮酒",
+      "unit": "ln(HR)",
+      "effect_type": "log_hr",
+      "estimate": {
+        "male": 0.04206,
+        "female": 0.10347
+      },
+      "range": {
+        "male": [
+          -0.01005,
+          0.10436
+        ],
+        "female": [
+          -0.26136,
+          0.27003
+        ]
+      },
+      "population": "CKB 30-79 岁成人",
+      "source": "sun2025_natcomm",
+      "source_location": "Supplementary Table 4；Table 1",
+      "evidence_type": "前瞻队列（多变量死亡预测模型）",
+      "status": "论文",
+      "used_in": [
+        "engine",
+        "recentering"
+      ]
+    },
+    {
+      "id": "alcohol.daily_ge60",
+      "domain": "饮酒",
+      "variable": "每天饮酒 ≥60 g 纯酒精（含既往饮酒者）",
+      "exposure_definition": "当前每天饮酒 ≥60 g 纯酒精；原模型把既往饮酒者也归入此组",
+      "reference_level": "非每天饮酒",
+      "unit": "ln(HR)",
+      "effect_type": "log_hr",
+      "estimate": {
+        "male": 0.23151,
+        "female": 0.12238
+      },
+      "range": {
+        "male": [
+          0.19062,
+          0.26236
+        ],
+        "female": [
+          0.0198,
+          0.24686
+        ]
+      },
+      "population": "CKB 30-79 岁成人",
+      "source": "sun2025_natcomm",
+      "source_location": "Supplementary Table 4；Table 1",
+      "evidence_type": "前瞻队列（多变量死亡预测模型）",
+      "status": "论文",
+      "used_in": [
+        "engine",
+        "recentering"
+      ]
+    },
+    {
+      "id": "pa.ln_met_h",
+      "domain": "身体活动",
+      "variable": "总身体活动量（取对数）",
+      "exposure_definition": "过去 12 个月职业、交通、家务、休闲活动的 MET×小时/天之和，模型中取 ln(MET-h/d)",
+      "reference_level": "20 MET-h/d（中心化值）",
+      "unit": "ln(HR) / ln(MET-h/d)",
+      "effect_type": "log_hr_per_ln_unit",
+      "estimate": {
+        "male": -0.08969,
+        "female": -0.18258
+      },
+      "range": {
+        "male": [
+          -0.10536,
+          -0.08338
+        ],
+        "female": [
+          -0.21072,
+          -0.17435
+        ]
+      },
+      "population": "CKB 30-79 岁成人",
+      "source": "sun2025_natcomm",
+      "source_location": "Supplementary Table 4；Table 1",
+      "evidence_type": "前瞻队列（多变量死亡预测模型）",
+      "status": "论文",
+      "notes": "1 MET-h/d 约等于每天增加 15 分钟中等强度活动（原文 Methods）。",
+      "used_in": [
+        "engine",
+        "recentering"
+      ]
+    },
+    {
+      "id": "pa.center",
+      "domain": "身体活动",
+      "variable": "身体活动中心化值",
+      "exposure_definition": "模型中心化值",
+      "reference_level": "-",
+      "unit": "MET-h/d",
+      "effect_type": "constant",
+      "estimate": {
+        "male": 20.0,
+        "female": 20.0
+      },
+      "range": null,
+      "population": "CKB",
+      "source": "sun2025_natcomm",
+      "source_location": "Table 1 脚注",
+      "evidence_type": "前瞻队列",
+      "status": "论文",
+      "used_in": [
+        "engine"
+      ]
+    },
+    {
+      "id": "pa.observed_range",
+      "domain": "身体活动",
+      "variable": "原模型身体活动取值范围",
+      "exposure_definition": "超出此范围的输入标记为外推",
+      "reference_level": "-",
+      "unit": "MET-h/d",
+      "effect_type": "observed_range",
+      "estimate": {
+        "male": [
+          0.0,
+          59.3
+        ],
+        "female": [
+          0.0,
+          59.3
+        ]
+      },
+      "range": null,
+      "population": "CKB",
+      "source": "sun2025_natcomm",
+      "source_location": "Supplementary Table 2",
+      "evidence_type": "前瞻队列",
+      "status": "论文",
+      "used_in": [
+        "engine"
+      ]
+    },
+    {
+      "id": "pa.floor",
+      "domain": "身体活动",
+      "variable": "身体活动下限（取对数前截断）",
+      "exposure_definition": "ln(MET-h/d) 在 0 处无定义，低于该值按该值计算",
+      "reference_level": "-",
+      "unit": "MET-h/d",
+      "effect_type": "constant",
+      "estimate": {
+        "male": 2.0,
+        "female": 2.0
+      },
+      "range": {
+        "male": [
+          1.0,
+          4.0
+        ],
+        "female": [
+          1.0,
+          4.0
+        ]
+      },
+      "population": "-",
+      "source": "estimate",
+      "source_location": "lifespan_predictor/hazards.py",
+      "evidence_type": "模型假设",
+      "status": "估算",
+      "rationale": "总身体活动包含家务和日常走动，CNHS 80 岁以上组均值仍约 5.9（男）/ 4.8（女）MET-h/d，长期低于约 2 MET-h/d 的成年人很少。截断防止对数项在接近 0 时无限放大风险。代价是：对活动量极低的人，增加活动的收益会被低估（见 README 锚点检查中身体活动单项偏低）。",
+      "used_in": [
+        "engine",
+        "recentering"
+      ]
+    },
+    {
+      "id": "diet.fruit_per_g",
+      "domain": "饮食",
+      "variable": "新鲜水果摄入",
+      "exposure_definition": "日常新鲜水果摄入量（g/天），线性进入对数风险",
+      "reference_level": "80 g/天（中心化值）",
+      "unit": "ln(HR) / (g/d)",
+      "effect_type": "log_hr_per_unit",
+      "estimate": {
+        "male": -0.0012426,
+        "female": -0.0020809
+      },
+      "range": {
+        "male": [
+          -0.00202,
+          -0.001005
+        ],
+        "female": [
+          -0.003046,
+          -0.001005
+        ]
+      },
+      "population": "CKB 30-79 岁成人",
+      "source": "sun2025_natcomm",
+      "source_location": "Supplementary Table 4（β=-0.12426 / -0.20809）；Table 1（每 10 g HR 0.98）",
+      "evidence_type": "前瞻队列（多变量死亡预测模型）",
+      "status": "论文",
+      "notes": "补充表 4 把单位写成 10 g/d，但 exp(-0.12426)=0.88 与 Table 1 每 10 g HR 0.98 对不上；按每 100 g/d 理解（β/100 每克）后每 10 g HR 为 0.988 / 0.979，与 Table 1 一致。这里采用后一种理解。",
+      "used_in": [
+        "engine",
+        "recentering"
+      ]
+    },
+    {
+      "id": "diet.fish_per_g",
+      "domain": "饮食",
+      "variable": "鱼/海产品摄入",
+      "exposure_definition": "日常鱼和海产品摄入量（g/天），线性进入对数风险",
+      "reference_level": "20 g/天（中心化值）",
+      "unit": "ln(HR) / (g/d)",
+      "effect_type": "log_hr_per_unit",
+      "estimate": {
+        "male": -0.0035292,
+        "female": -0.0061505
+      },
+      "range": {
+        "male": [
+          -0.006188,
+          -0.00202
+        ],
+        "female": [
+          -0.008338,
+          -0.005129
+        ]
+      },
+      "population": "CKB 30-79 岁成人",
+      "source": "sun2025_natcomm",
+      "source_location": "Supplementary Table 4（β=-0.35292 / -0.61505）；Table 1（每 10 g HR 0.96 / 0.93）",
+      "evidence_type": "前瞻队列（多变量死亡预测模型）",
+      "status": "论文",
+      "notes": "单位理解同 diet.fruit_per_g。",
+      "used_in": [
+        "engine",
+        "recentering"
+      ]
+    },
+    {
+      "id": "diet.red_meat_per_g",
+      "domain": "饮食",
+      "variable": "红肉摄入（固定在中心值，不作为可调变量）",
+      "exposure_definition": "日常红肉摄入量（g/天）",
+      "reference_level": "50 g/天（中心化值）",
+      "unit": "ln(HR) / (g/d)",
+      "effect_type": "log_hr_per_unit",
+      "estimate": {
+        "male": -0.0027162,
+        "female": -0.0034874
+      },
+      "range": {
+        "male": [
+          -0.004082,
+          -0.00202
+        ],
+        "female": [
+          -0.004082,
+          -0.00202
+        ]
+      },
+      "population": "CKB 30-79 岁成人",
+      "source": "sun2025_natcomm",
+      "source_location": "Supplementary Table 4；Table 1（每 10 g HR 0.97）",
+      "evidence_type": "前瞻队列（多变量死亡预测模型）",
+      "status": "论文",
+      "notes": "CKB 基线红肉摄入很低（11.7-65.2 g/天），红肉多吃风险更低的方向很可能反映收入和营养状况的混杂。原论文情景也没有改变红肉。引擎里把红肉固定在 50 g/天，不允许用户靠多吃红肉延寿。",
+      "used_in": []
+    },
+    {
+      "id": "diet.centers",
+      "domain": "饮食",
+      "variable": "饮食中心化值",
+      "exposure_definition": "水果 80 g/天、鱼/海产品 20 g/天、红肉 50 g/天",
+      "reference_level": "-",
+      "unit": "g/d",
+      "effect_type": "constant",
+      "estimate": {
+        "male": {
+          "fruit": 80.0,
+          "fish": 20.0,
+          "red_meat": 50.0
+        },
+        "female": {
+          "fruit": 80.0,
+          "fish": 20.0,
+          "red_meat": 50.0
+        }
+      },
+      "range": null,
+      "population": "CKB",
+      "source": "sun2025_natcomm",
+      "source_location": "Table 1 脚注",
+      "evidence_type": "前瞻队列",
+      "status": "论文",
+      "used_in": [
+        "engine"
+      ]
+    },
+    {
+      "id": "diet.observed_range",
+      "domain": "饮食",
+      "variable": "原模型饮食取值范围",
+      "exposure_definition": "超出此范围的输入标记为外推",
+      "reference_level": "-",
+      "unit": "g/d",
+      "effect_type": "observed_range",
+      "estimate": {
+        "male": {
+          "fruit": [
+            25.0,
+            123.4
+          ],
+          "fish": [
+            3.0,
+            50.5
+          ]
+        },
+        "female": {
+          "fruit": [
+            25.0,
+            123.4
+          ],
+          "fish": [
+            3.0,
+            50.5
+          ]
+        }
+      },
+      "range": null,
+      "population": "CKB",
+      "source": "sun2025_natcomm",
+      "source_location": "Supplementary Table 2",
+      "evidence_type": "前瞻队列",
+      "status": "论文",
+      "used_in": [
+        "engine"
+      ]
+    },
+    {
+      "id": "diet.effect_caps",
+      "domain": "饮食",
+      "variable": "饮食效应封顶摄入量",
+      "exposure_definition": "超过封顶值的摄入量按封顶值计算风险（仍标记为外推）",
+      "reference_level": "-",
+      "unit": "g/d",
+      "effect_type": "constant",
+      "estimate": {
+        "male": {
+          "fruit": 300.0,
+          "fish": 100.0
+        },
+        "female": {
+          "fruit": 300.0,
+          "fish": 100.0
+        }
+      },
+      "range": {
+        "male": {
+          "fruit": [
+            125.0,
+            500.0
+          ],
+          "fish": [
+            50.0,
+            150.0
+          ]
+        },
+        "female": {
+          "fruit": [
+            125.0,
+            500.0
+          ],
+          "fish": [
+            50.0,
+            150.0
+          ]
+        }
+      },
+      "population": "-",
+      "source": "estimate",
+      "source_location": "lifespan_predictor/hazards.py",
+      "evidence_type": "模型假设",
+      "status": "估算",
+      "rationale": "原模型的对数线性关系只在 CKB 观察范围（水果 25-123 g、鱼 3-51 g）内有数据支撑；不封顶时每天吃 1 kg 水果会得到不合理的巨大收益。封顶值取原论文理想情景的量级（CNHS 均值约 80 g 水果 + 200 g；约 20 g 鱼 + 50 g）再留一些余量。",
+      "used_in": [
+        "engine",
+        "recentering"
+      ]
+    },
+    {
+      "id": "bmi.15_to_18_5",
+      "domain": "BMI",
+      "variable": "BMI 15.0-<18.5",
+      "exposure_definition": "体重(kg)/身高(m)²；BMI <15 按此组计算并标记外推",
+      "reference_level": "BMI 20.0-<25.0",
+      "unit": "ln(HR)",
+      "effect_type": "log_hr",
+      "estimate": {
+        "male": 0.41211,
+        "female": 0.41211
+      },
+      "range": {
+        "male": [
+          0.35767,
+          0.46373
+        ],
+        "female": [
+          0.35767,
+          0.46373
+        ]
+      },
+      "population": "四大洲 239 项前瞻研究，限从不吸烟、无慢病、存活超过 5 年者",
+      "source": "gbmc2016_lancet",
+      "source_location": "摘要 Findings（HR 1.51, 1.43-1.59）",
+      "evidence_type": "个体数据荟萃分析",
+      "status": "论文",
+      "notes": "选用 GBMC 而不是 CKB 2025 模型的 BMI 系数：后者同时调整了收缩压、糖尿病等中介，超重 HR <1，不适合表示体重的总效应。",
+      "used_in": [
+        "engine",
+        "recentering"
+      ]
+    },
+    {
+      "id": "bmi.18_5_to_20",
+      "domain": "BMI",
+      "variable": "BMI 18.5-<20.0",
+      "exposure_definition": "体重(kg)/身高(m)²",
+      "reference_level": "BMI 20.0-<25.0",
+      "unit": "ln(HR)",
+      "effect_type": "log_hr",
+      "estimate": {
+        "male": 0.12222,
+        "female": 0.12222
+      },
+      "range": {
+        "male": [
+          0.08618,
+          0.157
+        ],
+        "female": [
+          0.08618,
+          0.157
+        ]
+      },
+      "population": "同 bmi.15_to_18_5",
+      "source": "gbmc2016_lancet",
+      "source_location": "摘要 Findings（HR 1.13, 1.09-1.17）",
+      "evidence_type": "个体数据荟萃分析",
+      "status": "论文",
+      "used_in": [
+        "engine",
+        "recentering"
+      ]
+    },
+    {
+      "id": "bmi.per5_above25_east_asia",
+      "domain": "BMI",
+      "variable": "BMI ≥25 每高 5 kg/m²（东亚）",
+      "exposure_definition": "BMI 超过 25 的部分按对数线性计算：ln(HR)=β×(BMI-25)/5",
+      "reference_level": "BMI 25",
+      "unit": "ln(HR) / 5 kg/m²",
+      "effect_type": "log_hr_per_unit",
+      "estimate": {
+        "male": 0.3293,
+        "female": 0.3293
+      },
+      "range": {
+        "male": [
+          0.29267,
+          0.36464
+        ],
+        "female": [
+          0.29267,
+          0.36464
+        ]
+      },
+      "population": "GBMC 东亚研究（从不吸烟、无慢病）",
+      "source": "gbmc2016_lancet",
+      "source_location": "摘要 Findings（east Asia HR 1.39, 1.34-1.44）",
+      "evidence_type": "个体数据荟萃分析",
+      "status": "论文",
+      "notes": "同一摘要报告该斜率在 35-49 岁测量时更大（1.52）、70-89 岁更小（1.21），男性大于女性；第一版统一使用东亚合并值。",
+      "used_in": [
+        "engine",
+        "recentering"
+      ]
+    },
+    {
+      "id": "sleep.short",
+      "domain": "睡眠",
+      "variable": "短睡眠",
+      "exposure_definition": "各原始研究自定的短睡眠类别（多数为每晚 ≤5-6 小时）",
+      "reference_level": "各研究的参照组（多数为 7-8 小时）",
+      "unit": "ln(RR)",
+      "effect_type": "log_hr",
+      "estimate": {
+        "male": 0.11333,
+        "female": 0.11333
+      },
+      "range": {
+        "male": [
+          0.05827,
+          0.16551
+        ],
+        "female": [
+          0.05827,
+          0.16551
+        ]
+      },
+      "population": "16 项研究 27 个队列，1,382,999 人",
+      "source": "cappuccio2010_sleep",
+      "source_location": "摘要 Results（RR 1.12, 1.06-1.18）",
+      "evidence_type": "前瞻队列荟萃分析",
+      "status": "论文",
+      "used_in": [
+        "engine",
+        "recentering"
+      ]
+    },
+    {
+      "id": "sleep.long",
+      "domain": "睡眠",
+      "variable": "长睡眠",
+      "exposure_definition": "各原始研究自定的长睡眠类别（多数为每晚 ≥9 小时）",
+      "reference_level": "各研究的参照组（多数为 7-8 小时）",
+      "unit": "ln(RR)",
+      "effect_type": "log_hr",
+      "estimate": {
+        "male": 0.26236,
+        "female": 0.26236
+      },
+      "range": {
+        "male": [
+          0.19885,
+          0.32208
+        ],
+        "female": [
+          0.19885,
+          0.32208
+        ]
+      },
+      "population": "同 sleep.short",
+      "source": "cappuccio2010_sleep",
+      "source_location": "摘要 Results（RR 1.30, 1.22-1.38）",
+      "evidence_type": "前瞻队列荟萃分析",
+      "status": "论文",
+      "used_in": [
+        "engine",
+        "recentering"
+      ]
+    },
+    {
+      "id": "sleep.cutpoints",
+      "domain": "睡眠",
+      "variable": "睡眠时长分段",
+      "exposure_definition": "<6 h 取全部短睡眠效应；6-7 h 取一半；7-8 h 为参照；8-9 h 取长睡眠效应的一半；≥9 h 取全部长睡眠效应；<4 h 或 >11 h 标记外推",
+      "reference_level": "7-8 h",
+      "unit": "h/晚",
+      "effect_type": "rule",
+      "estimate": {
+        "male": [
+          4.0,
+          6.0,
+          7.0,
+          8.0,
+          9.0,
+          11.0
+        ],
+        "female": [
+          4.0,
+          6.0,
+          7.0,
+          8.0,
+          9.0,
+          11.0
+        ]
+      },
+      "range": null,
+      "population": "-",
+      "source": "estimate",
+      "source_location": "lifespan_predictor/hazards.py",
+      "evidence_type": "模型假设",
+      "status": "估算",
+      "rationale": "荟萃分析只给了短/长两类的合并 RR，没有剂量曲线。中间段取一半是最简单的平滑处理；<4 h 没有长期队列数据，不再继续放大风险，只标记外推。",
+      "used_in": [
+        "engine",
+        "recentering"
+      ]
+    },
+    {
+      "id": "sleep.shrinkage",
+      "domain": "睡眠",
+      "variable": "睡眠效应收缩系数",
+      "exposure_definition": "睡眠 ln(RR) 乘以该系数后再进入模型",
+      "reference_level": "-",
+      "unit": "倍数",
+      "effect_type": "multiplier",
+      "estimate": {
+        "male": 0.5,
+        "female": 0.5
+      },
+      "range": {
+        "male": [
+          0.0,
+          1.0
+        ],
+        "female": [
+          0.0,
+          1.0
+        ]
+      },
+      "population": "-",
+      "source": "estimate",
+      "source_location": "lifespan_predictor/hazards.py",
+      "evidence_type": "模型假设",
+      "status": "估算",
+      "rationale": "CKB 2025 模型把睡眠时长列为候选变量，但最终模型没有保留，说明在中国成人中调整其他因素后睡眠的独立作用较小；Cappuccio 合并的研究调整程度不一，长睡眠与死亡的关联很可能部分来自已有疾病（反向因果）。为避免与吸烟、活动等因素重复计算，取一半。",
+      "used_in": [
+        "engine",
+        "recentering"
+      ]
+    },
+    {
+      "id": "lag.effect_tau_years",
+      "domain": "时间滞后",
+      "variable": "行为改变后风险过渡的时间常数",
+      "exposure_definition": "情景分叉后，吸烟/饮酒/活动/饮食/睡眠的 ln(HR) 从旧值按 1-exp(-t/τ) 过渡到新值；BMI 由体重模型自带动态，不再额外滞后",
+      "reference_level": "-",
+      "unit": "年",
+      "effect_type": "constant",
+      "estimate": {
+        "male": 2.0,
+        "female": 2.0
+      },
+      "range": {
+        "male": [
+          0.0,
+          10.0
+        ],
+        "female": [
+          0.0,
+          10.0
+        ]
+      },
+      "population": "-",
+      "source": "estimate",
+      "source_location": "lifespan_predictor/simulate.py",
+      "evidence_type": "模型假设",
+      "status": "估算",
+      "rationale": "两篇校准论文都没有建模滞后（Nat Commun 2025 在局限性中明确说明）。没有可靠参数时取一个温和的 2 年，并在范围里给出 0-10 年供敏感性分析；校准锚点检查使用 τ=0，与原论文口径一致。",
+      "used_in": [
+        "engine"
+      ]
+    },
+    {
+      "id": "age.effect_attenuation",
+      "domain": "年龄",
+      "variable": "高龄时生活方式与 BMI 风险比的衰减",
+      "exposure_definition": "所有 ln(HR) 乘以年龄相关系数：≤80 岁为 1，80-100 岁线性降到 end_multiplier，100 岁以上保持 end_multiplier",
+      "reference_level": "-",
+      "unit": "倍数",
+      "effect_type": "rule",
+      "estimate": {
+        "male": {
+          "start_age": 80.0,
+          "end_age": 100.0,
+          "end_multiplier": 0.5
+        },
+        "female": {
+          "start_age": 80.0,
+          "end_age": 100.0,
+          "end_multiplier": 0.5
+        }
+      },
+      "range": {
+        "male": {
+          "end_multiplier": [
+            0.0,
+            1.0
+          ]
+        },
+        "female": {
+          "end_multiplier": [
+            0.0,
+            1.0
+          ]
+        }
+      },
+      "population": "-",
+      "source": "estimate",
+      "source_location": "lifespan_predictor/hazards.py",
+      "evidence_type": "模型假设",
+      "status": "估算",
+      "rationale": "CKB 基线年龄 30-79 岁、随访约 12 年，90 岁以上几乎没有观察数据；GBMC 2016 摘要报告 BMI 斜率在 70-89 岁测量时（HR 1.21/5 单位）明显弱于 35-49 岁（1.52），说明相对风险随年龄减弱；Nat Commun 2025 的生命表只到 85 岁。按先验取 80 岁后线性减半，没有为了贴合锚点而调整。",
+      "used_in": [
+        "engine",
+        "recentering"
+      ]
+    },
+    {
+      "id": "pop.cnhs_smoking",
+      "domain": "参照人群",
+      "variable": "CNHS 吸烟分布",
+      "exposure_definition": "从不 / 既往 / 当前<20 / 当前≥20（%）",
+      "reference_level": "-",
+      "unit": "%",
+      "effect_type": "distribution",
+      "estimate": {
+        "male": [
+          35.5,
+          12.9,
+          23.8,
+          27.8
+        ],
+        "female": [
+          96.8,
+          0.8,
+          1.8,
+          0.6
+        ]
+      },
+      "range": null,
+      "population": "CNHS 2015，男 31,515 / 女 36,049",
+      "source": "sun2025_natcomm",
+      "source_location": "Supplementary Table 1",
+      "evidence_type": "全国代表性横断面调查（论文公开汇总值）",
+      "status": "论文",
+      "used_in": [
+        "recentering",
+        "anchor"
+      ]
+    },
+    {
+      "id": "pop.cnhs_current_smoking_by_age",
+      "domain": "参照人群",
+      "variable": "CNHS 分年龄当前吸烟率",
+      "exposure_definition": "年龄组 30-39/40-49/50-59/60-69/70-79/≥80",
+      "reference_level": "-",
+      "unit": "%",
+      "effect_type": "distribution_by_age",
+      "estimate": {
+        "male": [
+          51.96,
+          54.66,
+          57.33,
+          47.52,
+          35.34,
+          29.88
+        ],
+        "female": [
+          1.48,
+          1.88,
+          2.83,
+          2.92,
+          4.54,
+          4.61
+        ]
+      },
+      "range": null,
+      "population": "CNHS 2015",
+      "source": "sun2025_natcomm",
+      "source_location": "Source Data, Figure S6 工作表",
+      "evidence_type": "全国代表性横断面调查（论文公开汇总值）",
+      "status": "论文",
+      "used_in": [
+        "recentering",
+        "anchor"
+      ]
+    },
+    {
+      "id": "pop.cnhs_alcohol",
+      "domain": "参照人群",
+      "variable": "CNHS 饮酒分布",
+      "exposure_definition": "非每天 / 每天 1-29 g / 30-59 g / ≥60 g（%）",
+      "reference_level": "-",
+      "unit": "%",
+      "effect_type": "distribution",
+      "estimate": {
+        "male": [
+          83.2,
+          4.9,
+          4.6,
+          7.3
+        ],
+        "female": [
+          98.6,
+          1.0,
+          0.2,
+          0.2
+        ]
+      },
+      "range": null,
+      "population": "CNHS 2015",
+      "source": "sun2025_natcomm",
+      "source_location": "Supplementary Table 1",
+      "evidence_type": "全国代表性横断面调查（论文公开汇总值）",
+      "status": "论文",
+      "used_in": [
+        "recentering",
+        "anchor"
+      ]
+    },
+    {
+      "id": "pop.cnhs_excess_alcohol_by_age",
+      "domain": "参照人群",
+      "variable": "CNHS 分年龄过量饮酒率（≥30 g/天）",
+      "exposure_definition": "年龄组同上",
+      "reference_level": "-",
+      "unit": "%",
+      "effect_type": "distribution_by_age",
+      "estimate": {
+        "male": [
+          5.19,
+          11.95,
+          17.9,
+          17.9,
+          10.59,
+          8.55
+        ],
+        "female": [
+          0.08,
+          0.42,
+          0.41,
+          0.56,
+          0.84,
+          0.74
+        ]
+      },
+      "range": null,
+      "population": "CNHS 2015",
+      "source": "sun2025_natcomm",
+      "source_location": "Source Data, Figure S6 工作表",
+      "evidence_type": "全国代表性横断面调查（论文公开汇总值）",
+      "status": "论文",
+      "used_in": [
+        "recentering",
+        "anchor"
+      ]
+    },
+    {
+      "id": "pop.cnhs_pa_mean_by_age",
+      "domain": "参照人群",
+      "variable": "CNHS 分年龄总身体活动均值",
+      "exposure_definition": "年龄组同上",
+      "reference_level": "-",
+      "unit": "MET-h/d",
+      "effect_type": "distribution_by_age",
+      "estimate": {
+        "male": [
+          16.29,
+          19.32,
+          18.55,
+          15.06,
+          9.57,
+          5.91
+        ],
+        "female": [
+          12.45,
+          15.63,
+          15.56,
+          12.87,
+          8.41,
+          4.83
+        ]
+      },
+      "range": null,
+      "population": "CNHS 2015",
+      "source": "sun2025_natcomm",
+      "source_location": "Source Data, Figure S6 工作表；总体 SD 见 Supplementary Table 1（男 20.3 / 女 16.4）",
+      "evidence_type": "全国代表性横断面调查（论文公开汇总值）",
+      "status": "论文",
+      "used_in": [
+        "recentering",
+        "anchor"
+      ]
+    },
+    {
+      "id": "pop.cnhs_fruit_mean_by_age",
+      "domain": "参照人群",
+      "variable": "CNHS 分年龄水果摄入均值",
+      "exposure_definition": "年龄组同上",
+      "reference_level": "-",
+      "unit": "g/d",
+      "effect_type": "distribution_by_age",
+      "estimate": {
+        "male": [
+          95.94,
+          83.38,
+          80.28,
+          74.61,
+          67.35,
+          65.75
+        ],
+        "female": [
+          117.67,
+          99.74,
+          93.93,
+          82.46,
+          66.78,
+          55.36
+        ]
+      },
+      "range": null,
+      "population": "CNHS 2015",
+      "source": "sun2025_natcomm",
+      "source_location": "Source Data, Figure S6 工作表；总体 SD 男 95.1 / 女 102.1（Supplementary Table 1）",
+      "evidence_type": "全国代表性横断面调查（论文公开汇总值）",
+      "status": "论文",
+      "used_in": [
+        "recentering",
+        "anchor"
+      ]
+    },
+    {
+      "id": "pop.cnhs_fish_mean_by_age",
+      "domain": "参照人群",
+      "variable": "CNHS 分年龄鱼/海产品摄入均值",
+      "exposure_definition": "年龄组同上",
+      "reference_level": "-",
+      "unit": "g/d",
+      "effect_type": "distribution_by_age",
+      "estimate": {
+        "male": [
+          25.66,
+          21.4,
+          21.3,
+          20.13,
+          17.67,
+          18.16
+        ],
+        "female": [
+          21.7,
+          16.87,
+          17.67,
+          16.5,
+          13.69,
+          15.55
+        ]
+      },
+      "range": null,
+      "population": "CNHS 2015",
+      "source": "sun2025_natcomm",
+      "source_location": "Source Data, Figure S6 工作表；总体 SD 男 33.8 / 女 31.2（Supplementary Table 1）",
+      "evidence_type": "全国代表性横断面调查（论文公开汇总值）",
+      "status": "论文",
+      "used_in": [
+        "recentering",
+        "anchor"
+      ]
+    },
+    {
+      "id": "pop.cnhs_overall_sd",
+      "domain": "参照人群",
+      "variable": "CNHS 总体标准差",
+      "exposure_definition": "身体活动、水果、鱼的总体均值和 SD，用于设定各年龄组的变异系数",
+      "reference_level": "-",
+      "unit": "原单位",
+      "effect_type": "constant",
+      "estimate": {
+        "male": {
+          "pa": [
+            16.3,
+            20.3
+          ],
+          "fruit": [
+            79.7,
+            95.1
+          ],
+          "fish": [
+            21.1,
+            33.8
+          ]
+        },
+        "female": {
+          "pa": [
+            13.7,
+            16.4
+          ],
+          "fruit": [
+            92.6,
+            102.1
+          ],
+          "fish": [
+            17.3,
+            31.2
+          ]
+        }
+      },
+      "range": null,
+      "population": "CNHS 2015",
+      "source": "sun2025_natcomm",
+      "source_location": "Supplementary Table 1（均值, SD）",
+      "evidence_type": "全国代表性横断面调查（论文公开汇总值）",
+      "status": "论文",
+      "used_in": [
+        "recentering",
+        "anchor"
+      ]
+    },
+    {
+      "id": "pop.cnhs_bmi",
+      "domain": "参照人群",
+      "variable": "CNHS BMI 分布",
+      "exposure_definition": "<18.5 / 18.5-23.9 / 24.0-27.9 / ≥28（%）",
+      "reference_level": "-",
+      "unit": "%",
+      "effect_type": "distribution",
+      "estimate": {
+        "male": [
+          3.1,
+          42.7,
+          38.4,
+          15.9
+        ],
+        "female": [
+          3.0,
+          46.4,
+          35.2,
+          15.4
+        ]
+      },
+      "range": null,
+      "population": "CNHS 2015",
+      "source": "sun2025_natcomm",
+      "source_location": "Supplementary Table 1",
+      "evidence_type": "全国代表性横断面调查（论文公开汇总值）",
+      "status": "论文",
+      "used_in": [
+        "recentering",
+        "anchor"
+      ]
+    },
+    {
+      "id": "pop.distribution_shapes",
+      "domain": "参照人群",
+      "variable": "参照人群的分布形状与组合方式",
+      "exposure_definition": "身体活动、水果、鱼按对数正态分布抽样（各年龄组均值取 Figure S6，变异系数取总体 SD/均值）；BMI 在各组内均匀分布（<18.5 取 16-18.5，≥28 取 28-34）；吸烟当前者按总体比例拆分 <20/≥20，非当前者按总体比例拆分从不/既往；饮酒同理；各因素相互独立",
+      "reference_level": "-",
+      "unit": "-",
+      "effect_type": "rule",
+      "estimate": {
+        "male": "lognormal_cv_independent",
+        "female": "lognormal_cv_independent"
+      },
+      "range": null,
+      "population": "-",
+      "source": "estimate",
+      "source_location": "lifespan_predictor/population.py",
+      "evidence_type": "模型假设",
+      "status": "估算",
+      "rationale": "论文只公开了均值、SD 和类别比例，没有公开联合分布；Source Data 的 'Figure S2' 工作表（CKB 预测变量相关矩阵）显示生活方式变量之间相关很弱（吸烟-饮酒 0.24，其余多数 |r|<0.13），独立假设对平均风险影响有限。",
+      "used_in": [
+        "recentering",
+        "anchor"
+      ]
+    },
+    {
+      "id": "pop.sleep_distribution",
+      "domain": "参照人群",
+      "variable": "参照人群睡眠时长分布",
+      "exposure_definition": "<6 / 6-7 / 7-8 / 8-9 / ≥9 小时占比（%）",
+      "reference_level": "-",
+      "unit": "%",
+      "effect_type": "distribution",
+      "estimate": {
+        "male": [
+          10.0,
+          20.0,
+          40.0,
+          20.0,
+          10.0
+        ],
+        "female": [
+          10.0,
+          20.0,
+          40.0,
+          20.0,
+          10.0
+        ]
+      },
+      "range": null,
+      "population": "-",
+      "source": "estimate",
+      "source_location": "lifespan_predictor/population.py",
+      "evidence_type": "模型假设",
+      "status": "估算",
+      "rationale": "两篇校准论文都没有公开中国人群睡眠分布。这里用一个以 7-8 小时为中心的对称分布；因为睡眠效应已收缩一半，这个分布对参照人群平均风险的影响小于 2%。",
+      "used_in": [
+        "recentering"
+      ]
+    },
+    {
+      "id": "hall.rho_fat",
+      "domain": "体重模型",
+      "variable": "脂肪能量密度 ρF",
+      "exposure_definition": "体脂每 kg 储存的能量",
+      "reference_level": "-",
+      "unit": "MJ/kg",
+      "effect_type": "constant",
+      "estimate": {
+        "male": 39.5,
+        "female": 39.5
+      },
+      "range": null,
+      "population": "成人",
+      "source": "chow_hall2008_ploscb",
+      "source_location": "正文 Equation 3-5 后",
+      "evidence_type": "机制模型",
+      "status": "论文",
+      "used_in": [
+        "engine"
+      ]
+    },
+    {
+      "id": "hall.rho_lean",
+      "domain": "体重模型",
+      "variable": "瘦体重能量密度 ρL",
+      "exposure_definition": "瘦体重每 kg 储存的能量",
+      "reference_level": "-",
+      "unit": "MJ/kg",
+      "effect_type": "constant",
+      "estimate": {
+        "male": 7.6,
+        "female": 7.6
+      },
+      "range": null,
+      "population": "成人",
+      "source": "chow_hall2008_ploscb",
+      "source_location": "正文 Equation 8-9 后",
+      "evidence_type": "机制模型",
+      "status": "论文",
+      "used_in": [
+        "engine"
+      ]
+    },
+    {
+      "id": "hall.forbes_c",
+      "domain": "体重模型",
+      "variable": "Forbes 常数",
+      "exposure_definition": "Forbes 关系 L = 10.4·ln(F/D)，据此能量盈余/亏空分配给瘦体重的比例 p = C/(C+F)，C = 10.4·ρL/ρF",
+      "reference_level": "-",
+      "unit": "kg",
+      "effect_type": "constant",
+      "estimate": {
+        "male": 10.4,
+        "female": 10.4
+      },
+      "range": null,
+      "population": "成人",
+      "source": "chow_hall2008_ploscb",
+      "source_location": "正文 Equation 14",
+      "evidence_type": "机制模型",
+      "status": "论文",
+      "used_in": [
+        "engine"
+      ]
+    },
+    {
+      "id": "hall.energy_expenditure",
+      "domain": "体重模型",
+      "variable": "能量消耗 E = 0.14·L + 0.05·F + K",
+      "exposure_definition": "L、F 单位 kg，E 单位 MJ/天；K 由起始体重下能量平衡求出（吸收身高、年龄、日常活动等个体差异）",
+      "reference_level": "-",
+      "unit": "MJ/(kg·d)",
+      "effect_type": "constant",
+      "estimate": {
+        "male": {
+          "lean": 0.14,
+          "fat": 0.05
+        },
+        "female": {
+          "lean": 0.14,
+          "fat": 0.05
+        }
+      },
+      "range": null,
+      "population": "久坐成人",
+      "source": "chow_hall2008_ploscb",
+      "source_location": "正文 E = 0.14L + 0.05F + 1.55 示例",
+      "evidence_type": "机制模型",
+      "status": "论文",
+      "notes": "该式在原文是一个基于横断面静息能耗和久坐活动的示例。Hall 2011 Lancet 的完整成人模型还包含适应性产热、食物热效应和随体重变化的活动能耗；这里用简化版，并在测试里用 Hall 2011 的经验法则检验量级。",
+      "used_in": [
+        "engine"
+      ]
+    },
+    {
+      "id": "hall.initial_body_fat",
+      "domain": "体重模型",
+      "variable": "初始体脂率",
+      "exposure_definition": "BF% = 1.20×BMI + 0.23×年龄 − 10.8×性别(男=1) − 5.4",
+      "reference_level": "-",
+      "unit": "%",
+      "effect_type": "formula",
+      "estimate": {
+        "male": [
+          1.2,
+          0.23,
+          -10.8,
+          -5.4
+        ],
+        "female": [
+          1.2,
+          0.23,
+          -10.8,
+          -5.4
+        ]
+      },
+      "range": null,
+      "population": "荷兰 1,229 人（成人公式 R²=0.79，SEE 4.1%）",
+      "source": "deurenberg1991_bjn",
+      "source_location": "摘要",
+      "evidence_type": "人体测量回归",
+      "status": "论文",
+      "notes": "亚洲人在同一 BMI 下体脂率通常更高，这个公式可能低估中国人体脂，影响的是 Forbes 分配比例，对长期体重变化量级影响有限。",
+      "used_in": [
+        "engine"
+      ]
+    },
+    {
+      "id": "hall.rule_of_thumb",
+      "domain": "体重模型",
+      "variable": "体重变化经验法则",
+      "exposure_definition": "每天能量摄入永久改变 100 kJ，最终体重约变化 1 kg；约 1 年完成一半、约 3 年完成 95%",
+      "reference_level": "-",
+      "unit": "kg / (100 kJ/d)",
+      "effect_type": "calibration_target",
+      "estimate": {
+        "male": 1.0,
+        "female": 1.0
+      },
+      "range": null,
+      "population": "超重成人平均",
+      "source": "hall2011_lancet",
+      "source_location": "正文 Discussion（rule of thumb）",
+      "evidence_type": "机制模型",
+      "status": "论文",
+      "used_in": [
+        "test"
+      ]
+    },
+    {
+      "id": "hall.example_100kg_man",
+      "domain": "体重模型",
+      "variable": "100 kg 久坐男性减少 2 MJ/天",
+      "exposure_definition": "每天能量摄入减少 2 MJ（480 kcal），10 年模拟",
+      "reference_level": "-",
+      "unit": "kg",
+      "effect_type": "calibration_target",
+      "estimate": {
+        "male": 75.0,
+        "female": null
+      },
+      "range": null,
+      "population": "-",
+      "source": "hall2011_lancet",
+      "source_location": "正文 Figure 2A 描述：平台约 75 kg，约 1 年达到一半，约 3 年达到 95%",
+      "evidence_type": "机制模型",
+      "status": "论文",
+      "used_in": [
+        "test"
+      ]
+    },
+    {
+      "id": "scenario.adverse_energy_surplus",
+      "domain": "情景",
+      "variable": "多重不良情景的长期能量盈余",
+      "exposure_definition": "相对于起始体重维持所需能量，每天多摄入的能量",
+      "reference_level": "能量平衡",
+      "unit": "kcal/d",
+      "effect_type": "constant",
+      "estimate": {
+        "male": 250.0,
+        "female": 250.0
+      },
+      "range": {
+        "male": [
+          100.0,
+          500.0
+        ],
+        "female": [
+          100.0,
+          500.0
+        ]
+      },
+      "population": "-",
+      "source": "estimate",
+      "source_location": "lifespan_predictor/scenarios.py",
+      "evidence_type": "模型假设",
+      "status": "估算",
+      "rationale": "Hall 2019 住院随机交叉试验中，超加工饮食两周内自由进食多吃约 508 kcal/天。短期试验不能直接外推几十年，长期会有部分代偿，所以取约一半作为默认值，上限保留 500 kcal/天。按 Hall 经验法则，250 kcal/天（约 1 MJ）最终约增重 10 kg。",
+      "used_in": [
+        "engine"
+      ]
+    },
+    {
+      "id": "scenario.optimized_targets",
+      "domain": "情景",
+      "variable": "优化情景的行为目标",
+      "exposure_definition": "吸烟→既往吸烟（从不吸烟者保持）；饮酒→非每天；身体活动→max(当前+pa_increment, pa_minimum)；水果→max(当前, fruit_g)；鱼→max(当前, fish_g)；睡眠→sleep_h；BMI→通过长期能量摄入调整到 bmi_range（已在区间内则不变）",
+      "reference_level": "用户当前输入",
+      "unit": "-",
+      "effect_type": "rule",
+      "estimate": {
+        "male": {
+          "pa_increment": 4.0,
+          "pa_minimum": 25.0,
+          "fruit_g": 250.0,
+          "fish_g": 50.0,
+          "sleep_h": 7.5,
+          "bmi_range": [
+            20.5,
+            23.5
+          ]
+        },
+        "female": {
+          "pa_increment": 4.0,
+          "pa_minimum": 25.0,
+          "fruit_g": 250.0,
+          "fish_g": 50.0,
+          "sleep_h": 7.5,
+          "bmi_range": [
+            20.5,
+            23.5
+          ]
+        }
+      },
+      "range": null,
+      "population": "-",
+      "source": "estimate",
+      "source_location": "lifespan_predictor/scenarios.py",
+      "evidence_type": "模型假设",
+      "status": "估算",
+      "rationale": "目标取 Nat Commun 2025 理想情景的同量级（戒烟、过量饮酒降为适量、活动 +4 MET-h/d、水果 +200 g、鱼 +50 g），并要求 BMI 落在 GBMC 最低风险区间 20-25 内。这是产品设定，不是论文给出的最优值。",
+      "used_in": [
+        "engine"
+      ]
+    },
+    {
+      "id": "scenario.adverse_targets",
+      "domain": "情景",
+      "variable": "多重不良情景的行为设定",
+      "exposure_definition": "各项取用户当前值与下列设定中更差的一个：吸烟 smoking；饮酒 alcohol；身体活动 pa_met_h；水果 fruit_g；鱼 fish_g；睡眠 sleep_h（当前更短则保持）；能量盈余见 scenario.adverse_energy_surplus",
+      "reference_level": "用户当前输入",
+      "unit": "-",
+      "effect_type": "rule",
+      "estimate": {
+        "male": {
+          "smoking": "current_ge20",
+          "alcohol": "daily_ge60",
+          "pa_met_h": 5.0,
+          "fruit_g": 25.0,
+          "fish_g": 3.0,
+          "sleep_h": 5.5
+        },
+        "female": {
+          "smoking": "current_ge20",
+          "alcohol": "daily_ge60",
+          "pa_met_h": 5.0,
+          "fruit_g": 25.0,
+          "fish_g": 3.0,
+          "sleep_h": 5.5
+        }
+      },
+      "range": null,
+      "population": "-",
+      "source": "estimate",
+      "source_location": "lifespan_predictor/scenarios.py",
+      "evidence_type": "模型假设",
+      "status": "估算",
+      "rationale": "各项取原模型观察范围的不利端（水果、鱼取 CKB 下限，活动取 CNHS 高龄组均值量级），避免进入没有数据的极端区间；这是现实中可同时出现的一组不良习惯，不是每项都设为最坏值。",
+      "used_in": [
+        "engine"
+      ]
+    },
+    {
+      "id": "anchor.nc2025",
+      "domain": "校准锚点",
+      "variable": "全人群生活方式改变后 30 岁预期寿命增加",
+      "exposure_definition": "理想情景：现吸烟者全部戒烟；过量饮酒（≥30 g/d）降为适量；<65 岁活动 +4、≥65 岁 +2 MET-h/d；水果 +200 g/d、鱼 +50 g/d。现实情景：男性吸烟率降到 20%；活动 +2/+1；水果 +100、鱼 +20",
+      "reference_level": "基准情景（CNHS 2015 暴露不变），30 岁预期寿命 男 45.46 / 女 47.00",
+      "unit": "年",
+      "effect_type": "calibration_target",
+      "estimate": {
+        "male": {
+          "ideal": 4.83,
+          "practical": 2.61,
+          "base_le30": 45.46,
+          "ideal_diet": 3.62,
+          "ideal_pa": 0.72,
+          "ideal_smoking": 0.68,
+          "ideal_alcohol": 0.15
+        },
+        "female": {
+          "ideal": 5.39,
+          "practical": 3.1,
+          "base_le30": 47.0,
+          "ideal_diet": 4.26,
+          "ideal_pa": 1.47,
+          "ideal_smoking": 0.05,
+          "ideal_alcohol": 0.01
+        }
+      },
+      "range": {
+        "male": {
+          "ideal": [
+            4.01,
+            5.82
+          ],
+          "practical": [
+            2.15,
+            3.17
+          ]
+        },
+        "female": {
+          "ideal": [
+            4.7,
+            6.18
+          ],
+          "practical": [
+            2.67,
+            3.59
+          ]
+        }
+      },
+      "population": "CNHS 2015 全国代表性样本（男 31,515 / 女 36,049）",
+      "source": "sun2025_natcomm",
+      "source_location": "Table 2、Table 3",
+      "evidence_type": "反事实预测模拟",
+      "status": "论文",
+      "used_in": [
+        "test"
+      ]
+    },
+    {
+      "id": "anchor.ckb2022",
+      "domain": "校准锚点",
+      "variable": "5 项低风险生活方式 vs 0-1 项的 30 岁预期寿命差",
+      "exposure_definition": "低风险：从不吸烟或非因病戒烟；不过量饮酒（男 <30、女 <15 g/d 每天饮酒或非每天饮酒）；身体活动 ≥ 同年龄同性别中位数；饮食评分 4-5（每天蔬菜、每天水果、红肉 1-6 天/周、豆类 ≥4 天/周、鱼 ≥1 天/周）；BMI 18.5-27.9 且腰围 <90/85 cm",
+      "reference_level": "0-1 项低风险因素（30 岁预期寿命 男 41.7 / 女 47.3 年）",
+      "unit": "年",
+      "effect_type": "calibration_target",
+      "estimate": {
+        "male": {
+          "le_gain": 8.8,
+          "hr_5_vs_0_1": 0.38
+        },
+        "female": {
+          "le_gain": 8.1,
+          "hr_5_vs_0_1": 0.38
+        }
+      },
+      "range": {
+        "male": {
+          "le_gain": [
+            6.8,
+            10.7
+          ],
+          "hr_5_vs_0_1": [
+            0.34,
+            0.43
+          ]
+        },
+        "female": {
+          "le_gain": [
+            6.5,
+            9.9
+          ],
+          "hr_5_vs_0_1": [
+            0.34,
+            0.43
+          ]
+        }
+      },
+      "population": "CKB 487,209 人（排除冠心病、卒中、癌症）+ CNHS 2015 + GBD 2015 死亡率",
+      "source": "sun2022_lancetph",
+      "source_location": "摘要 Findings；正文 Methods（低风险定义）",
+      "evidence_type": "前瞻队列 + 生命表",
+      "status": "论文",
+      "used_in": [
+        "test"
+      ],
+      "notes": "HR 0.38 是男女合并值（摘要未分性别给出），男女两列填的是同一个数；预期寿命差 8.8 / 8.1 是分性别的。"
+    }
+  ]
+}
