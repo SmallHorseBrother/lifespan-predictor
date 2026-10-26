@@ -7,6 +7,7 @@ name = "lifespan-predictor"
 version = "0.1.0"
 description = "寿命预测器：基于中国生命表与已发表研究参数的寿命模拟估算（不用于诊断）"
 readme = "README.md"
+license = { text = "MIT" }
 requires-python = ">=3.11"
 dependencies = ["numpy>=1.26"]
 
