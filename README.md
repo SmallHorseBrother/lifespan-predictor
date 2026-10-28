@@ -85,7 +85,7 @@ summary = result.to_dict()  # JSON-ready：三个情景的分布、到达 70/80/
 状态只有两种：
 
 - **论文**（39 项）：来自论文或官方统计，已联网核对。对数风险比的范围是论文的 95% CI。
-- **估算**（15 项）：没有论文直接给出，写明理由和大致范围。包括：普查漏报校准系数、95 岁以上外推、身体活动对数截断、饮食效应封顶、睡眠分段和收缩、滞后 τ、高龄衰减、参照人群的分布形状和睡眠分布、多因素和只改饮食两种模式下各情景的具体设定。
+- **估算**（17 项）：没有论文直接给出，写明理由和大致范围。包括：普查漏报校准系数、95 岁以上外推、身体活动对数截断、饮食效应封顶、睡眠分段和收缩、滞后 τ、高龄衰减、参照人群的分布形状和睡眠分布、多因素和只改饮食两种模式下各情景的具体设定、坚持程度和延迟开始的建模方式。
 
 每个参数另有 `estimated`（布尔值，等于 status 是否为“估算”）和 `estimate_note`（估算理由，论文参数为空），方便食探直接读取。
 
@@ -159,7 +159,43 @@ python -m lifespan_predictor --sex male --age 30 --height 175 --weight 82 --mode
 | 可移植随机数 | 单次人生用 SplitMix64：`u = (splitmix64(seed·0x9E3779B97F4A7C15 + life_index) >> 11 + 0.5)·2⁻⁵³`，阈值 `−ln(1−u)`，不含情景编号，测试里固定了参考值 |
 | Go 端复现 | 确定性曲线只依赖注册表、生命表和 `data/mean_rr_point.csv`（`scripts/export_mean_rr.py` 导出）。`top_changes` 的范围和 `simulate()` 的蒙特卡洛用 numpy 随机数，Go 端只能按容差比较 |
 | 输入 `LifespanInput` | 还没有适配层：引擎目前接收 `Profile`（性别、年龄、身高、体重、吸烟 4 档、饮酒 4 档、MET-h/d、水果 g/d、鱼 g/d、睡眠、能量平衡）。体重趋势→能量平衡、食物组份数→克数、疾病和生物标志物都还没有接 |
-| 黄金向量 | 还没有导出 |
+| 黄金向量 | 已导出：`golden/fixtures.json`（240 组）和 `golden/constants.json`，见上一节 |
+
+## 从某个年龄才开始改，以及坚持程度
+
+两个可选参数，`lifespan_result`、`one_life`、`simulate`（`plan=make_plan(...)`）和命令行都能传，作用于除参照分支（`current`）以外的所有分支：
+
+| 参数 | 默认 | 含义 |
+|---|---|---|
+| `change_start_age` | 当前年龄（马上开始） | 这个年龄之前按"照现在"的习惯和能量平衡过；从这个年龄起切换到目标习惯，滞后 τ 从这一年起算，体重接着当时的身体状态变化。取值 [当前年龄, 110] |
+| `adherence` | `1`（完全做到） | 常数 0–1，或衰减型 `{"type": "decay", "start": 0.9, "end": 0.5, "half_life_years": 2}`：a(s) = end + (start − end) × 0.5^(s / half_life)，s 为开始改变后的年数 |
+
+坚持程度的算法：活动、水果、鱼、睡眠、能量平衡取 当前 + a × (目标 − 当前)；吸烟、饮酒按对数风险比插值 old + a × (new − old)。坚持程度下降时目标立即回落，改善仍按滞后 τ 生效。两项都是建模假设，注册表里是 `plan.adherence`、`plan.delayed_start`（估算）。默认值走原来的代码路径，输出与 0.1 版逐位相同（用上一版提交实测对比过 30 个随机画像的全部输出），`input_hash` 也不变；非默认值会写进 `input_hash`，并在 `plan` 和每个分支的 `policy` 里回显。
+
+"晚开始还有没有用"：
+
+```python
+from lifespan_predictor.foodlink import gain_by_start_age
+
+gain_by_start_age(profile, mode="diet", branch=None, ages=None, adherence=None, scenario=None, lag_tau_years=None)
+# -> {"branch", "reference", "reference_mean", "adherence", "rows": [{"change_start_age", "mean", "gain_years", "gain_p85_pct"}]}
+```
+
+```bash
+python -m lifespan_predictor --sex male --age 30 --height 175 --weight 82 --smoking current_lt20 --mode diet --format gain-by-start
+python -m lifespan_predictor --sex male --age 30 --height 175 --weight 82 --mode diet --format foodlink --start-age 50 --adherence decay:0.9,0.5,2
+```
+
+示例里那位 30 岁男性只改饮食：30 岁就开始改，比照现在平均多活 4.6 年；40 岁开始 +4.4，50 岁 +3.9，60 岁 +3.1，70 岁 +2.0。从现在开始但只做到一半（a = 0.5），收益约 +2.9 年；前两年 90%、之后降到 50% 的衰减型与此相近。
+
+## 黄金向量（Python、Go、JS 三端对照）
+
+| 文件 | 内容 | 生成 |
+|---|---|---|
+| `golden/constants.json` | 引擎需要的全部常量：点估计系数、逐岁 m_x、mean_RR、情景/体重/警告/计划用到的注册表值、算法常量（步长、随机数推导） | `python scripts/export_constants.py`（`--check` 检查是否过期） |
+| `golden/fixtures.json` | 240 组"输入 → 输出"：每个分支的 life_expectancy（mean/median/p10/p90）、40–100 岁若干年龄的存活概率、体重（起/中/末）、life_index 0–2 的单次人生死亡年龄。覆盖 18/30/50/79/85 岁（含小数年龄）、男女、吸烟和饮酒各档、BMI 16–40、外推输入、两种模式和自定义方案、开始年龄（现在 / 中年 / 99 岁）、坚持程度（1 / 0 / 0.5 / 0.7 / 衰减型） | `python scripts/export_golden.py`（`--check` 检查是否漂移） |
+
+容差：存活概率 ≤ 0.001，年龄 ≤ 0.05 年，同一 seed 的单次人生一致。体重模型里随时间变化的能量差在每个 7 天步长的中点读取一次（t = (j + 0.5) × h / 365.25 年，j 为全局步号），移植时需要照做。测试会抽查 fixtures 并检查常量文件没有过期。
 
 ## 目录
 
@@ -169,8 +205,9 @@ data/cn_life_table_2020.csv        校准后的逐岁生命表（含原始 m_x�
 data/mean_rr_point.csv             参照人群平均风险比（点估计，给 Go 端嵌入）
 registry/parameters.json           参数注册表（唯一数据源）
 registry/parameters.csv            注册表的扁平导出（给 Go / 表格软件）
-lifespan_predictor/                引擎：life_table、hazards、population、weight、scenarios、simulate、anchors、foodlink
-scripts/                           生命表构建、注册表导出、锚点报告
+lifespan_predictor/                引擎：life_table、hazards、population、weight、scenarios、plan、simulate、anchors、foodlink
+golden/                            三端共用的常量和黄金向量
+scripts/                           生命表构建、注册表导出、锚点报告、常量和黄金向量导出
 tests/                             单元测试 + 校准锚点检查
 docs/sources.md                    每个来源的标识和核对方式
 docs/anchor_results.md             锚点检查完整结果
@@ -187,10 +224,10 @@ docs/anchor_results.md             锚点检查完整结果
 
 - 只覆盖六个领域（BMI、饮食、吸烟、饮酒、身体活动、睡眠），没有疾病状态、血压/血糖、心理、社会、环境、医疗管理模块，所以输出的只有全因死亡，没有健康寿命或带病年数。
 - 饮食只用水果和鱼两个变量（CKB 模型的变量），还不能直接读取食探的完整饮食记录或饮食质量评分。
-- 优化和多重不良情景都假设 100% 长期执行，没有依从性模块。
+- 坚持程度和延迟开始是建模假设：没有研究直接测量"做到一半"或"晚开始"的寿命效应，既往吸烟的风险比也不区分戒烟年龄。
 - 体重模型用简化版能耗公式，没有适应性产热和随年龄的体成分变化；Deurenberg 公式可能低估中国人体脂。
 - 风险比对所有成年年龄一样（80 岁后衰减），没有年龄交互；18–29 岁和 80 岁以上属于外推（输出会标记）。
 - 参数不确定性只抽样论文系数，估算参数（衰减、收缩、滞后、能量盈余等）需要做结构敏感性分析，还没有做成自动报告。论文系数的 SE 由 Table 1 两位小数的 HR 置信区间反推（补充表 4 只给 β、没给 SE），会有一定误差。
 - 参照人群各因素独立抽样，没有建模吸烟与饮酒等因素的相关。
-- 随机数用 numpy 的 PCG64，Go 端要逐位复现需要换成可移植的生成器（见交接清单）。
-- 还没有和食探的 Go 后端对接，也没有接口服务；`LifespanInput` 适配层和黄金向量还没做（见“接入食探”）。
+- 单次人生用可移植的 SplitMix64；`top_changes` 的范围和 `simulate()` 的蒙特卡洛仍用 numpy 的 PCG64，Go 端只能按容差比较。
+- 还没有和食探的 Go 后端对接，也没有接口服务；`LifespanInput` 适配层还没做（见“接入食探”）。

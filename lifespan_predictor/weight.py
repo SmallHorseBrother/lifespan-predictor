@@ -16,6 +16,7 @@ Lancet rule of thumb in tests/test_weight.py.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Callable
 
 import numpy as np
 
@@ -79,25 +80,36 @@ def simulate_weight(
     delta_intake_kcal: float,
     n_years: int,
     dt_days: float = 7.0,
+    delta_schedule: Callable[[float], float] | None = None,
 ) -> WeightTrajectory:
-    """Integrate the model (RK2) and report body composition at each year."""
+    """Integrate the model (RK2) and report body composition at each year.
+
+    delta_schedule: optional energy balance (kcal/d) as a function of years
+    since `age`. It is read once per step, at the step midpoint
+    t = (j + 0.5) * h / 365.25 for global step j, and held for that step.
+    Without it the balance is the constant delta_intake_kcal.
+    """
     bp = body_params(sex)
     fat0 = initial_fat_kg(sex, age, weight_kg, height_cm)
     lean0 = weight_kg - fat0
     delta_mj = delta_intake_kcal * KCAL_TO_MJ
 
-    def imbalance(fat: float, lean: float) -> float:
-        return delta_mj - bp.ee_lean * (lean - lean0) - bp.ee_fat * (fat - fat0)
+    def imbalance(fat: float, lean: float, energy_mj: float) -> float:
+        return energy_mj - bp.ee_lean * (lean - lean0) - bp.ee_fat * (fat - fat0)
 
     steps_per_year = max(1, int(round(DAYS_PER_YEAR / dt_days)))
     h = DAYS_PER_YEAR / steps_per_year
     fat, lean = fat0, lean0
     fats, leans = [fat], [lean]
+    step = 0
     for _ in range(n_years):
         for _ in range(steps_per_year):
-            k1 = _derivatives(fat, lean, imbalance(fat, lean), bp)
+            if delta_schedule is not None:
+                delta_mj = delta_schedule((step + 0.5) * h / DAYS_PER_YEAR) * KCAL_TO_MJ
+            step += 1
+            k1 = _derivatives(fat, lean, imbalance(fat, lean, delta_mj), bp)
             mid_f, mid_l = fat + 0.5 * h * k1[0], lean + 0.5 * h * k1[1]
-            k2 = _derivatives(mid_f, mid_l, imbalance(mid_f, mid_l), bp)
+            k2 = _derivatives(mid_f, mid_l, imbalance(mid_f, mid_l, delta_mj), bp)
             fat = max(fat + h * k2[0], 0.5)
             lean = lean + h * k2[1]
         fats.append(fat)

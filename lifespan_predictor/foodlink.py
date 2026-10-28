@@ -12,6 +12,10 @@ docs/algorithms/foodlink-lifespan-simulator-v1-design.md, section 4.2).
 
 Not available yet (returned as null with a warning): disease-free survival,
 healthy years, disease events, input completeness.
+
+change_start_age / adherence (see plan.py) apply to every branch except the
+reference (current). Defaults (start now, adherence 1) leave all numbers and
+the input hash unchanged.
 """
 
 from __future__ import annotations
@@ -26,12 +30,14 @@ import numpy as np
 
 from .exposures import CKB_BASELINE_AGE, Profile, evidence_warnings, validate
 from .hazards import draw_coefficients, point_coefficients
+from .life_table import MAX_AGE
+from .plan import DEFAULT_PLAN, Adherence, ChangePlan, make_plan
 from .population import mean_rr_by_age, reference_population
 from .registry import REGISTRY_PATH, load_registry
 from .scenarios import Scenario, build_scenarios
 from .simulate import _death_times, _expected_remaining, scenario_hazard
 
-ENGINE_VERSION = "lifespan-cn-0.1.0"
+ENGINE_VERSION = "lifespan-cn-0.2.0"
 HISTOGRAM_BIN_YEARS = 2
 UINT64 = (1 << 64) - 1
 GOLDEN_GAMMA = 0x9E3779B97F4A7C15
@@ -84,8 +90,14 @@ def params_sha256() -> str:
     return hashlib.sha256(REGISTRY_PATH.read_bytes()).hexdigest()
 
 
-def input_hash(profile: Profile, mode: str, lag_tau: float, n_param_draws: int) -> str:
+def input_hash(
+    profile: Profile, mode: str, lag_tau: float, n_param_draws: int, plan: ChangePlan = DEFAULT_PLAN
+) -> str:
+    """SHA-256 of the canonical inputs (not the seed). The plan is included
+    only when it differs from the default, so default hashes stay stable."""
     payload = {"profile": asdict(profile), "mode": mode, "lag_tau_years": lag_tau, "n_param_draws": n_param_draws}
+    if not plan.is_default(profile.age):
+        payload["plan"] = plan.to_dict(profile.age)
     canonical = json.dumps(payload, sort_keys=True, ensure_ascii=False, separators=(",", ":"))
     return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
@@ -146,8 +158,9 @@ def _p_alive_at(profile: Profile, hazard_row: np.ndarray, age: float) -> float |
     return float(surv[k] * math.exp(-hazard_row[min(k, hazard_row.size - 1)] * (offset - k)))
 
 
-def _policy(scn: Scenario) -> dict:
+def _policy(scn: Scenario, plan_dict: dict) -> dict:
     return {
+        **plan_dict,
         "smoking": scn.smoking,
         "alcohol": scn.alcohol,
         "pa_met_h": float(scn.pa_met_h),
@@ -164,7 +177,7 @@ def _plain(value):
     return value if isinstance(value, str) else round(float(value), 2)
 
 
-def _top_changes(profile, mode, base, best, lag, n_param_draws, seed) -> list[dict]:
+def _top_changes(profile, mode, base, best, lag, n_param_draws, seed, plan) -> list[dict]:
     rng = np.random.default_rng([seed, 3])
     c_draws = draw_coefficients(profile.sex, n_param_draws, rng)
     rr_draws = mean_rr_by_age(reference_population(profile.sex), c_draws)
@@ -179,8 +192,8 @@ def _top_changes(profile, mode, base, best, lag, n_param_draws, seed) -> list[di
         if all(getattr(base, f) == v for f, v in target.items()):
             continue
         single = replace(base, name=f"only_{factor}", **target)
-        gains = _expected_remaining(scenario_hazard(profile, single, base, c_draws, rr_draws, lag)[0]) - base_draw
-        point_row = scenario_hazard(profile, single, base, c_point, rr_point, lag)[0][0]
+        gains = _expected_remaining(scenario_hazard(profile, single, base, c_draws, rr_draws, lag, plan)[0]) - base_draw
+        point_row = scenario_hazard(profile, single, base, c_point, rr_point, lag, plan)[0][0]
         p85 = (_p_alive_at(profile, point_row, 85.0), _p_alive_at(profile, base_point, 85.0))
         field = fields[0]
         out.append(
@@ -211,9 +224,17 @@ def lifespan_result(
     seed: int = 20261024,
     n_param_draws: int = 200,
     lag_tau_years: float | None = None,
+    change_start_age: float | None = None,
+    adherence: float | dict | Adherence | None = None,
 ) -> dict:
-    """LifespanResult for FoodLink. mode "diet" (default) or "lifestyle"."""
+    """LifespanResult for FoodLink. mode "diet" (default) or "lifestyle".
+
+    change_start_age: age at which the non-reference branches start changing
+    (default: now). adherence: 0-1, or {"type": "decay", "start", "end",
+    "half_life_years"} (default: 1).
+    """
     validate(profile)
+    plan = make_plan(change_start_age, adherence).validate(profile.age)
     reg = load_registry()
     lag = float(reg.value("lag.effect_tau_years", profile.sex)) if lag_tau_years is None else lag_tau_years
     futures = build_scenarios(profile, mode)
@@ -222,9 +243,10 @@ def lifespan_result(
     mean_rr = mean_rr_by_age(reference_population(profile.sex), c)
 
     branches, warnings = [], []
+    plan_dict = plan.to_dict(profile.age)
     for scn in futures:
-        hazard, weight, bmi = scenario_hazard(profile, scn, base, c, mean_rr, lag)
-        branch = {"key": scn.name, "label": scn.label, "policy": _policy(scn)}
+        hazard, weight, bmi = scenario_hazard(profile, scn, base, c, mean_rr, lag, plan)
+        branch = {"key": scn.name, "label": scn.label, "policy": _policy(scn, plan_dict)}
         branch.update(_branch_curves(profile, hazard[0], weight, bmi))
         branches.append(branch)
         for w in evidence_warnings(
@@ -244,11 +266,12 @@ def lifespan_result(
             "engine_version": ENGINE_VERSION,
             "params_version": reg.version,
             "params_sha256": params_sha256(),
-            "input_hash": input_hash(profile, mode, lag, n_param_draws),
+            "input_hash": input_hash(profile, mode, lag, n_param_draws, plan),
             "seed": seed,
             "computed_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         },
         "mode": mode,
+        "plan": plan_dict,
         "disclaimer": "模拟估算，不用于诊断",
         "applicability": {
             "age_in_range": CKB_BASELINE_AGE[0] <= profile.age <= CKB_BASELINE_AGE[1],
@@ -256,15 +279,24 @@ def lifespan_result(
             "completeness_pct": None,
         },
         "branches": branches,
-        "top_changes": _top_changes(profile, mode, base, futures[1], lag, n_param_draws, seed),
+        "top_changes": _top_changes(profile, mode, base, futures[1], lag, n_param_draws, seed, plan),
         "top_changes_note": "单因素反事实：每次只把一项改到目标值，各项收益合计不等于全部一起改的收益",
         "warnings": warnings,
     }
 
 
-def one_life(profile: Profile, mode: str = "diet", seed: int = 20261024, life_index: int = 0, lag_tau_years: float | None = None) -> dict:
+def one_life(
+    profile: Profile,
+    mode: str = "diet",
+    seed: int = 20261024,
+    life_index: int = 0,
+    lag_tau_years: float | None = None,
+    change_start_age: float | None = None,
+    adherence: float | dict | Adherence | None = None,
+) -> dict:
     """One random life per branch, all branches sharing one SplitMix64 threshold."""
     validate(profile)
+    plan = make_plan(change_start_age, adherence).validate(profile.age)
     lag = float(load_registry().value("lag.effect_tau_years", profile.sex)) if lag_tau_years is None else lag_tau_years
     futures = build_scenarios(profile, mode)
     c = point_coefficients(profile.sex)
@@ -272,12 +304,72 @@ def one_life(profile: Profile, mode: str = "diet", seed: int = 20261024, life_in
     threshold = np.array([[-math.log(1.0 - life_uniform(seed, life_index))]])
     branches = []
     for scn in futures:
-        hazard = scenario_hazard(profile, scn, futures[0], c, mean_rr, lag)[0]
+        hazard = scenario_hazard(profile, scn, futures[0], c, mean_rr, lag, plan)[0]
         death_age = round(profile.age + float(_death_times(hazard, threshold)[0, 0]), 2)
         branches.append({"key": scn.name, "death_age": death_age, "events": [{"age": death_age, "type": "death"}]})
     return {
         "seed": seed,
         "life_index": life_index,
+        "plan": plan.to_dict(profile.age),
         "note": "一次随机结果，不是预测。第一版只有死亡事件，没有疾病事件",
         "branches": branches,
+    }
+
+
+def gain_by_start_age(
+    profile: Profile,
+    mode: str = "diet",
+    branch: str | None = None,
+    ages: list[float] | None = None,
+    adherence: float | dict | Adherence | None = None,
+    scenario: Scenario | None = None,
+    lag_tau_years: float | None = None,
+) -> dict:
+    """Is it still worth starting late? Mean lifespan gain over the reference
+    branch when the change starts at each age in `ages` (default: now, 40,
+    50, 60, 70; ages before now or from 110 on are dropped).
+
+    branch: a branch key of `mode` (default: the improving one, diet_right /
+    optimized); scenario overrides it with a custom future. Point estimates,
+    deterministic.
+    """
+    validate(profile)
+    adh = Adherence.from_spec(adherence)
+    lag = float(load_registry().value("lag.effect_tau_years", profile.sex)) if lag_tau_years is None else lag_tau_years
+    futures = build_scenarios(profile, mode)
+    base = futures[0]
+    if scenario is None:
+        by_key = {f.name: f for f in futures}
+        key = branch or futures[1].name
+        if key not in by_key:
+            raise ValueError(f"branch must be one of {tuple(by_key)}, got {key!r}")
+        scenario = by_key[key]
+    requested = [profile.age, 40.0, 50.0, 60.0, 70.0] if ages is None else list(ages)
+    starts = sorted({float(a) for a in requested if profile.age <= a < MAX_AGE})
+    c = point_coefficients(profile.sex)
+    mean_rr = mean_rr_by_age(reference_population(profile.sex), c)
+    base_row = scenario_hazard(profile, base, base, c, mean_rr, lag)[0][0]
+    base_mean = profile.age + float(_expected_remaining(base_row[None, :])[0])
+    base_p85 = _p_alive_at(profile, base_row, 85.0)
+    rows = []
+    for start in starts:
+        plan = ChangePlan(change_start_age=start, adherence=adh).validate(profile.age)
+        row = scenario_hazard(profile, scenario, base, c, mean_rr, lag, plan)[0][0]
+        mean = profile.age + float(_expected_remaining(row[None, :])[0])
+        p85 = _p_alive_at(profile, row, 85.0)
+        rows.append(
+            {
+                "change_start_age": start,
+                "mean": round(mean, 2),
+                "gain_years": round(mean - base_mean, 2),
+                "gain_p85_pct": None if p85 is None or base_p85 is None else round((p85 - base_p85) * 100, 2),
+            }
+        )
+    return {
+        "branch": scenario.name,
+        "reference": base.name,
+        "reference_mean": round(base_mean, 2),
+        "adherence": adh.to_dict(),
+        "rows": rows,
+        "note": "只看平均寿命增益；开始越晚，能受益的年数越少",
     }

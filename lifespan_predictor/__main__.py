@@ -11,8 +11,22 @@ import json
 import sys
 
 from .exposures import ALCOHOL, SMOKING, Profile
-from .foodlink import lifespan_result, one_life
+from .foodlink import gain_by_start_age, lifespan_result, one_life
+from .plan import make_plan
 from .simulate import simulate
+
+
+def parse_adherence(text: str) -> float | dict:
+    if text.startswith("decay:"):
+        try:
+            start, end, half_life = (float(x) for x in text[len("decay:"):].split(","))
+        except ValueError as exc:
+            raise argparse.ArgumentTypeError("衰减型写成 decay:起始,长期,半衰期年数") from exc
+        return {"type": "decay", "start": start, "end": end, "half_life_years": half_life}
+    try:
+        return float(text)
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError("adherence 写成 0-1 的数字或 decay:0.9,0.5,2") from exc
 
 
 def parse_args(argv: list[str]) -> argparse.Namespace:
@@ -34,7 +48,16 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     p.add_argument("--lag", type=float, default=None, help="行为改变的滞后时间常数（年）")
     p.add_argument("--plot", default=None, help="把生存曲线和体重轨迹画到这个 PNG 文件")
     p.add_argument("--mode", choices=("lifestyle", "diet"), default="lifestyle", help="lifestyle=多因素分叉；diet=只改饮食（食探默认）")
-    p.add_argument("--format", choices=("summary", "foodlink", "one-life"), default="summary", help="输出格式")
+    p.add_argument(
+        "--format", choices=("summary", "foodlink", "one-life", "gain-by-start"), default="summary", help="输出格式"
+    )
+    p.add_argument("--start-age", type=float, default=None, help="从几岁开始改（默认现在）")
+    p.add_argument(
+        "--adherence",
+        type=parse_adherence,
+        default=None,
+        help="坚持程度：0-1 的常数，或 decay:起始,长期,半衰期年数（如 decay:0.9,0.5,2）",
+    )
     p.add_argument("--life-index", type=int, default=0, help="--format one-life 时的人生编号")
     return p.parse_args(argv)
 
@@ -57,13 +80,29 @@ def main(argv: list[str] | None = None) -> int:
         energy_balance_kcal=args.energy_balance,
     )
     try:
+        plan_kwargs = {"change_start_age": args.start_age, "adherence": args.adherence}
         if args.format == "foodlink":
-            payload = lifespan_result(profile, mode=args.mode, seed=args.seed, n_param_draws=args.draws, lag_tau_years=args.lag)
+            payload = lifespan_result(
+                profile, mode=args.mode, seed=args.seed, n_param_draws=args.draws, lag_tau_years=args.lag, **plan_kwargs
+            )
         elif args.format == "one-life":
-            payload = one_life(profile, mode=args.mode, seed=args.seed, life_index=args.life_index, lag_tau_years=args.lag)
+            payload = one_life(
+                profile, mode=args.mode, seed=args.seed, life_index=args.life_index, lag_tau_years=args.lag, **plan_kwargs
+            )
+        elif args.format == "gain-by-start":
+            ages = None if args.start_age is None else [profile.age, args.start_age]
+            payload = gain_by_start_age(
+                profile, mode=args.mode, ages=ages, adherence=args.adherence, lag_tau_years=args.lag
+            )
         else:
             result = simulate(
-                profile, n_lives=args.lives, n_param_draws=args.draws, seed=args.seed, lag_tau_years=args.lag, mode=args.mode
+                profile,
+                n_lives=args.lives,
+                n_param_draws=args.draws,
+                seed=args.seed,
+                lag_tau_years=args.lag,
+                mode=args.mode,
+                plan=make_plan(**plan_kwargs),
             )
             payload = result.to_dict()
     except ValueError as exc:

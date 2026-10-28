@@ -18,19 +18,25 @@ from .hazards import (
     Coefficients,
     age_attenuation,
     alcohol_code,
+    alcohol_log_hr,
     behaviour_log_hr,
     bmi_log_hr,
+    diet_log_hr,
     draw_coefficients,
+    pa_log_hr,
     point_coefficients,
+    sleep_log_hr,
     smoking_code,
+    smoking_log_hr,
 )
 from .life_table import MAX_AGE, baseline_mx
+from .plan import DEFAULT_PLAN, ChangePlan
 from .population import mean_rr_by_age, reference_population
 from .registry import load_registry
 from .scenarios import Scenario, build_scenarios
 from .weight import simulate_weight
 
-MODEL_VERSION = "lifespan-predictor 0.1.0"
+MODEL_VERSION = "lifespan-predictor 0.2.0"
 REACH_AGES = (70, 80, 90, 100)
 
 
@@ -87,6 +93,7 @@ class SimulationResult:
     seed: int
     n_param_draws: int
     lag_tau_years: float
+    plan: ChangePlan = DEFAULT_PLAN
     model_version: str = MODEL_VERSION
     registry_version: str = field(default_factory=lambda: load_registry().version)
 
@@ -109,6 +116,7 @@ class SimulationResult:
             "n_lives": int(next(iter(self.results.values())).death_age.size),
             "n_param_draws": self.n_param_draws,
             "lag_tau_years": self.lag_tau_years,
+            "plan": self.plan.to_dict(self.profile.age),
             "disclaimer": "模拟估算，不用于诊断",
             "profile": self.profile.__dict__,
             "scenarios": [r.summary(self.profile.age) for r in self.results.values()],
@@ -137,32 +145,83 @@ def scenario_hazard(
     c: Coefficients,
     mean_rr: np.ndarray,
     lag_tau: float,
+    plan: ChangePlan | None = None,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """Annual hazards (D, n_years) plus yearly weight and BMI (n_years + 1,).
 
     Interval k covers attained ages [age + k, age + k + 1). Single-age rates
     m_x are treated as values at age x + 0.5 and interpolated log-linearly to
     the interval midpoint, so results change smoothly with the starting age.
+    plan: when the change starts and how well it sticks (see plan.py); the
+    default plan takes the original code path, so its output is unchanged.
     """
+    plan = plan or DEFAULT_PLAN
+    default = plan.is_default(profile.age)
     n_years = int(MAX_AGE - profile.age)
+    schedule = None if default else plan.energy_schedule(profile.age, base_scn.delta_intake_kcal, scn.delta_intake_kcal)
     traj = simulate_weight(
-        profile.sex, profile.age, profile.height_cm, profile.weight_kg, scn.delta_intake_kcal, n_years
+        profile.sex, profile.age, profile.height_cm, profile.weight_kg, scn.delta_intake_kcal, n_years,
+        delta_schedule=schedule,
     )
     height_m2 = (profile.height_cm / 100) ** 2
     bmi = traj.weight_kg / height_m2
     bmi_mid = (bmi[:-1] + bmi[1:]) / 2
 
     old = _behaviour_lhr(base_scn, c)
-    new = _behaviour_lhr(scn, c)
     k = np.arange(n_years) + 0.5
-    remaining = np.exp(-k / lag_tau) if lag_tau > 0 else np.zeros(n_years)
-    behaviour = new + (old - new) * remaining[None, :]
+    if default:
+        new = _behaviour_lhr(scn, c)
+        remaining = np.exp(-k / lag_tau) if lag_tau > 0 else np.zeros(n_years)
+        behaviour = new + (old - new) * remaining[None, :]
+    else:
+        behaviour = _planned_behaviour(profile, scn, base_scn, c, plan, lag_tau, n_years, old)
 
     mid_age = profile.age + k
     log_hr = (behaviour + bmi_log_hr(bmi_mid[None, :], c)) * age_attenuation(profile.sex, mid_age)[None, :]
     base = interpolate_log(baseline_mx(profile.sex)[None, :], mid_age)
     hazard = base * np.exp(log_hr) / interpolate_log(mean_rr, mid_age)
     return hazard, traj.weight_kg, bmi
+
+
+def _planned_behaviour(
+    profile: Profile,
+    scn: Scenario,
+    base_scn: Scenario,
+    c: Coefficients,
+    plan: ChangePlan,
+    lag_tau: float,
+    n_years: int,
+    old: np.ndarray,
+) -> np.ndarray:
+    """Behaviour log HR per year (D, n_years) under a delayed start / partial adherence.
+
+    Target at year k: continuous exposures at current + a_k (target - current),
+    smoking and alcohol log HR at old + a_k (new - old). Before the start the
+    branch keeps the reference exposures; afterwards it approaches the target
+    with the usual lag, counted from the start.
+    """
+    s, a = plan.year_weights(profile.age, n_years)
+
+    def mix(current: float, target: float) -> np.ndarray:
+        return current + a * (target - current)
+
+    def categorical(x: Scenario) -> np.ndarray:
+        return smoking_log_hr(np.array([smoking_code(x.smoking)]), c) + alcohol_log_hr(np.array([alcohol_code(x.alcohol)]), c)
+
+    cat_old, cat_new = categorical(base_scn), categorical(scn)
+    target = (
+        cat_old
+        + a[None, :] * (cat_new - cat_old)
+        + pa_log_hr(mix(base_scn.pa_met_h, scn.pa_met_h), c)
+        + diet_log_hr(mix(base_scn.fruit_g, scn.fruit_g), mix(base_scn.fish_g, scn.fish_g), c)
+        + sleep_log_hr(mix(base_scn.sleep_h, scn.sleep_h), c)
+    )
+    started = s >= 0
+    if lag_tau > 0:
+        ramp = np.where(started, 1.0 - np.exp(-np.maximum(s, 0.0) / lag_tau), 0.0)
+    else:
+        ramp = started.astype(float)
+    return old + (target - old) * ramp[None, :]
 
 
 def interpolate_log(values: np.ndarray, ages: np.ndarray) -> np.ndarray:
@@ -207,6 +266,7 @@ def simulate(
     parameter_uncertainty: bool = True,
     scenarios: tuple[Scenario, ...] | None = None,
     mode: str = "lifestyle",
+    plan: ChangePlan | None = None,
 ) -> SimulationResult:
     """Simulate the forked futures of one person.
 
@@ -215,8 +275,10 @@ def simulate(
     Default: the three futures of `mode` ("lifestyle": current / optimized /
     adverse; "diet": current / diet_right / diet_loose).
     n_lives must be a multiple of the number of parameter draws.
+    plan: delayed start / adherence applied to every non-reference future.
     """
     validate(profile)
+    plan = (plan or DEFAULT_PLAN).validate(profile.age)
     if n_lives < 1 or n_param_draws < 1:
         raise ValueError("n_lives and n_param_draws must be positive")
     lag = float(load_registry().value("lag.effect_tau_years", profile.sex)) if lag_tau_years is None else lag_tau_years
@@ -239,7 +301,7 @@ def simulate(
     base = futures[0]
     results = {}
     for scn in futures:
-        hazard, weight, bmi = scenario_hazard(profile, scn, base, c, mean_rr, lag)
+        hazard, weight, bmi = scenario_hazard(profile, scn, base, c, mean_rr, lag, plan)
         t = _death_times(hazard, thresholds).ravel()
         death_age = profile.age + t
         ages = profile.age + np.arange(hazard.shape[1] + 1)
@@ -260,5 +322,5 @@ def simulate(
             flags=flags,
         )
     return SimulationResult(
-        profile=profile, results=results, seed=seed, n_param_draws=draws, lag_tau_years=lag
+        profile=profile, results=results, seed=seed, n_param_draws=draws, lag_tau_years=lag, plan=plan
     )

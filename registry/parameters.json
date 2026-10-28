@@ -1,5 +1,5 @@
 {
-  "registry_version": "2026.10.24-v0.2",
+  "registry_version": "2026.10.28-v0.3",
   "note": "寿命预测器参数注册表。status 只有两种：\"论文\"（来自论文或官方统计，并已联网核对）和 \"估算\"（无论文直接给出，按理由给点估计和大致范围）。range 对论文参数是 95% CI（与 estimate 同单位），对估算参数是合理范围。所有对数风险比均为自然对数。食探 Go 后端读取同一份文件。",
   "sources": {
     "nbs_census2020_t6_4": {
@@ -1018,6 +1018,101 @@
       ],
       "estimated": true,
       "estimate_note": "两篇校准论文都没有建模滞后（Nat Commun 2025 在局限性中明确说明）。没有可靠参数时取一个温和的 2 年，并在范围里给出 0-10 年供敏感性分析；校准锚点检查使用 τ=0，与原论文口径一致。"
+    },
+    {
+      "id": "plan.adherence",
+      "domain": "情景执行",
+      "variable": "坚持程度 adherence",
+      "exposure_definition": "a(s) ∈ [0, 1]，s 为开始改变后的年数；常数或衰减型 {type: decay, start, end, half_life_years}",
+      "reference_level": "a = 1（完全按目标执行）",
+      "unit": "比例",
+      "effect_type": "rule",
+      "estimate": {
+        "male": {
+          "default": {
+            "type": "constant",
+            "level": 1.0
+          },
+          "tiers": [
+            0.9,
+            0.7,
+            0.5
+          ],
+          "fade": {
+            "type": "decay",
+            "start": 0.9,
+            "end": 0.5,
+            "half_life_years": 2.0
+          }
+        },
+        "female": {
+          "default": {
+            "type": "constant",
+            "level": 1.0
+          },
+          "tiers": [
+            0.9,
+            0.7,
+            0.5
+          ],
+          "fade": {
+            "type": "decay",
+            "start": 0.9,
+            "end": 0.5,
+            "half_life_years": 2.0
+          }
+        }
+      },
+      "range": {
+        "male": [
+          0.0,
+          1.0
+        ],
+        "female": [
+          0.0,
+          1.0
+        ]
+      },
+      "population": "-",
+      "source": "estimate",
+      "source_location": "lifespan_predictor/plan.py",
+      "evidence_type": "模型假设",
+      "status": "估算",
+      "rationale": "没有研究直接给出“只坚持了一部分”时的寿命效应，这是建模假设。做法：连续暴露（身体活动、水果、鱼、睡眠、能量平衡）取 当前 + a×(目标−当前)，吸烟、饮酒这类档位按对数风险比插值 old + a×(new−old)；衰减型 a(s) = end + (start−end)×0.5^(s/half_life)，s 为开始改变后的年数。档位 0.9 / 0.7 / 0.5 和“前两年做得好、之后慢慢下降”（0.9 降到 0.5、半衰期 2 年）来自需求文档的产品建议，不是测量值。坚持程度下降时目标立即回落（不加滞后），改善仍按 lag.effect_tau_years 逐步生效。",
+      "used_in": [
+        "engine"
+      ],
+      "estimated": true,
+      "estimate_note": "没有研究直接给出“只坚持了一部分”时的寿命效应，这是建模假设。做法：连续暴露（身体活动、水果、鱼、睡眠、能量平衡）取 当前 + a×(目标−当前)，吸烟、饮酒这类档位按对数风险比插值 old + a×(new−old)；衰减型 a(s) = end + (start−end)×0.5^(s/half_life)，s 为开始改变后的年数。档位 0.9 / 0.7 / 0.5 和“前两年做得好、之后慢慢下降”（0.9 降到 0.5、半衰期 2 年）来自需求文档的产品建议，不是测量值。坚持程度下降时目标立即回落（不加滞后），改善仍按 lag.effect_tau_years 逐步生效。"
+    },
+    {
+      "id": "plan.delayed_start",
+      "domain": "情景执行",
+      "variable": "从某个年龄才开始改 change_start_age",
+      "exposure_definition": "change_start_age ∈ [当前年龄, 110]，默认等于当前年龄（马上开始）",
+      "reference_level": "马上开始",
+      "unit": "岁",
+      "effect_type": "rule",
+      "estimate": {
+        "male": {
+          "default": "profile.age"
+        },
+        "female": {
+          "default": "profile.age"
+        }
+      },
+      "range": null,
+      "population": "-",
+      "source": "estimate",
+      "source_location": "lifespan_predictor/plan.py",
+      "evidence_type": "模型假设",
+      "status": "估算",
+      "rationale": "开始改变之前，这条未来按参照分支（照现在）的暴露和能量平衡过；从 change_start_age 起切换到目标，滞后 τ 从这一年起算，体重模型接着当时的身体状态换成新的能量差。这是建模假设：CKB 等队列的风险比描述的是长期保持某种习惯的人群，并不能直接说明中年或老年才开始改变时能拿回多少；“既往吸烟”的风险比也不区分戒烟年龄。晚开始的收益由“剩余的暴露年数”和 80 岁后的风险比衰减共同决定，没有额外加入年龄对可逆性的惩罚。",
+      "used_in": [
+        "engine"
+      ],
+      "estimated": true,
+      "estimate_note": "开始改变之前，这条未来按参照分支（照现在）的暴露和能量平衡过；从 change_start_age 起切换到目标，滞后 τ 从这一年起算，体重模型接着当时的身体状态换成新的能量差。这是建模假设：CKB 等队列的风险比描述的是长期保持某种习惯的人群，并不能直接说明中年或老年才开始改变时能拿回多少；“既往吸烟”的风险比也不区分戒烟年龄。晚开始的收益由“剩余的暴露年数”和 80 岁后的风险比衰减共同决定，没有额外加入年龄对可逆性的惩罚。"
     },
     {
       "id": "age.effect_attenuation",
